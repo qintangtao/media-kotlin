@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout>
+    <data>
+        <import type="android.view.View"/>
+        <variable
+            name="itemBean"
+            type="com.kotlin.media.model.bean.Video" />
+        <variable
+            name="listenner"
+            type="com.kotlin.mvvm.base.OnItemClickListener" />
+        <variable
+            name="listenner2"
+            type="com.kotlin.media.ui.base.OnItemLongClickListener" />
+    </data>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="230dp"
+    android:padding="9dp"
+    android:onLongClick="@{(view)->listenner2.onClick(view, itemBean)}">
+
+    <com.kotlin.media.ui.view.PlayerTextureView
+        android:id="@+id/ptv_player"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:radius="12dp"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        />
+    <!---->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/shape_bg_video"
+        android:alpha="0.8"
+        android:visibility="@{itemBean.play ? View.GONE : View.VISIBLE}"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        />
+
+    <TextView
+        android:id="@+id/tvName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@{itemBean.name}"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        android:layout_marginStart="9dp"
+        android:layout_marginTop="6dp"
+        android:textColor="@color/white"
+        />
+
+    <ImageView
+        android:id="@+id/ivPlay"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:src="@drawable/ic_chevron_right_black_24dp"
+        android:onClick="@{(view)->listenner.onClick(view, itemBean)}"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent" />
+
+    <ImageView
+        android:id="@+id/ivDetail"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:layout_marginEnd="9dp"
+        android:layout_marginTop="6dp"
+        android:src="@drawable/ic_chevron_right_black_24dp"
+        android:onClick="@{(view)->listenner.onClick(view, itemBean)}"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+
+</androidx.constraintlayout.widget.ConstraintLayout>
+</layout>

@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="DesignSurface">
+    <option name="filePathToZoomLevelMap">
+      <map>
+        <entry key="..\:/Qt/Qt5.12.2/Licenses/open/media-kotlin/app/src/main/res/layout-land/activity_main.xml" value="0.349647266313933" />
+        <entry key="..\:/Qt/Qt5.12.2/Licenses/open/media-kotlin/app/src/main/res/layout-land/item_video.xml" value="0.349647266313933" />
+        <entry key="..\:/Qt/Qt5.12.2/Licenses/open/media-kotlin/app/src/main/res/layout/activity_detail.xml" value="0.245018115942029" />
+        <entry key="..\:/Qt/Qt5.12.2/Licenses/open/media-kotlin/app/src/main/res/layout/activity_edit.xml" value="0.245018115942029" />
+        <entry key="..\:/Qt/Qt5.12.2/Licenses/open/media-kotlin/app/src/main/res/layout/activity_main.xml" value="0.245018115942029" />
+        <entry key="..\:/Qt/Qt5.12.2/Licenses/open/media-kotlin/app/src/main/res/layout/item_video.xml" value="0.245018115942029" />
+        <entry key="..\:/work/projects/media-kotlin/app/src/main/res/drawable/ic_add_black_24dp.xml" value="0.1" />
+        <entry key="..\:/work/projects/media-kotlin/app/src/main/res/drawable/ic_android.xml" value="0.1725" />
+        <entry key="..\:/work/projects/media-kotlin/app/src/main/res/drawable/ic_baseline_add_circle_24.xml" value="0.142" />
+        <entry key="..\:/work/projects/media-kotlin/app/src/main/res/drawable/ic_baseline_lens_24.xml" value="0.1" />
+        <entry key="..\:/work/projects/media-kotlin/app/src/main/res/drawable/ic_baseline_navigate_next_14.xml" value="0.1" />
+        <entry key="..\:/work/projects/media-kotlin/app/src/main/res/drawable/ic_baseline_navigate_next_24.xml" value="0.1" />
+        <entry key="..\:/work/projects/media-kotlin/app/src/main/res/drawable/ic_chevron_right_black_24dp.xml" value="0.1" />
+        <entry key="..\:/work/projects/media-kotlin/app/src/main/res/drawable/ic_close_black_24dp.xml" value="0.1725" />
+        <entry key="..\:/work/projects/media-kotlin/app/src/main/res/drawable/ic_star_black_24dp.xml" value="0.1165" />
+        <entry key="..\:/work/projects/media-kotlin/app/src/main/res/drawable/ic_star_border_black_24dp.xml" value="0.1165" />
+        <entry key="..\:/work/projects/media-kotlin/app/src/main/res/drawable/ic_video_play_black_24dp.xml" value="0.1725" />
+        <entry key="..\:/work/projects/media-kotlin/app/src/main/res/drawable/selector_box_stroke.xml" value="0.1165" />
+        <entry key="..\:/work/projects/media-kotlin/app/src/main/res/drawable/selector_video_play.xml" value="0.193" />
+        <entry key="..\:/work/projects/media-kotlin/app/src/main/res/drawable/shape_bg_btn.xml" value="0.1005" />
+        <entry key="..\:/work/projects/media-kotlin/app/src/main/res/drawable/shape_bg_video.xml" value="0.1" />
+        <entry key="..\:/work/projects/media-kotlin/app/src/main/res/drawable/shape_cursor.xml" value="0.2335" />
+        <entry key="..\:/work/projects/media-kotlin/app/src/main/res/drawable/shape_green_cursor.xml" value="0.1" />
+        <entry key="..\:/work/projects/media-kotlin/app/src/main/res/layout-land/activity_main.xml" value="0.12740805604203154" />
+        <entry key="..\:/work/projects/media-kotlin/app/src/main/res/layout-land/item_video.xml" value="0.1668126094570928" />
+        <entry key="..\:/work/projects/media-kotlin/app/src/main/res/layout-port/activity_main.xml" value="0.25052083333333336" />
+        <entry key="..\:/work/projects/media-kotlin/app/src/main/res/layout/activity_detail.xml" value="0.14895833333333333" />
+        <entry key="..\:/work/projects/media-kotlin/app/src/main/res/layout/activity_edit.xml" value="0.5" />
+        <entry key="..\:/work/projects/media-kotlin/app/src/main/res/layout/activity_main.xml" value="0.25052083333333336" />
+        <entry key="..\:/work/projects/media-kotlin/app/src/main/res/layout/item_video.xml" value="0.19375" />
+      </map>
+    </option>
+  </component>
+  <component name="ProjectRootManager" version="2" languageLevel="JDK_11" default="true" project-jdk-name="Android Studio default JDK" project-jdk-type="JavaSDK">
+    <output url="file://$PROJECT_DIR$/build/classes" />
+  </component>
+  <component name="ProjectType">
+    <option name="id" value="Android" />
+  </component>
+</project>
