@@ -2124,3 +2124,13 @@ void stream_close(VideoState *is)
 #endif
     av_free(is);
 }
+
+const char *stream_filename(VideoState *is)
+{
+    return is->filename;
+}
+
+void *stream_surface(VideoState *is)
+{
+    return is->surface;
+}

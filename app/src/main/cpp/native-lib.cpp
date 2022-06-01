@@ -670,6 +670,43 @@ Java_com_kotlin_media_DeviceSurface_pauseFfmpeg(
 }
 
 
+extern "C" JNIEXPORT jlong JNICALL
+Java_com_kotlin_media_DeviceSurface_ffmpegOpen(
+        JNIEnv* env,
+        jobject /* this */,
+        jstring url,
+        jobject surface) {
+
+    const char *utf8 = env->GetStringUTFChars(url, NULL);
+    jobject gsurface = env->NewGlobalRef(surface);
+
+    LOGV("open source file %s, surface %x\n", utf8, gsurface);
+
+    VideoState *is = stream_open(utf8, NULL, gsurface);
+
+    env->ReleaseStringUTFChars(url, utf8);
+
+    return (jlong)is;
+}
+extern "C" JNIEXPORT void JNICALL
+Java_com_kotlin_media_DeviceSurface_ffmpegClose(
+        JNIEnv* env,
+        jobject /* this */,
+        jlong handle) {
+
+    VideoState *is = (VideoState *)handle;
+
+    const char *utf8 = stream_filename(is);
+    jobject gsurface = (jobject)stream_surface(is);
+
+    LOGV("close source file %s, surface %x\n", utf8, gsurface);
+
+    stream_close(is);
+
+    env->DeleteGlobalRef(gsurface);
+}
+
+
 
 void print_ffmpeg_info()
 {

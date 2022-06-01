@@ -16,6 +16,7 @@ import com.kotlin.media.DeviceSurface
 import com.kotlin.media.data.local.VideoDao
 import com.kotlin.media.ui.base.OnItemLongClickListener
 import com.kotlin.media.ui.video.detail.DetailActivity
+import com.kotlin.media.ui.view.PlayerTextureView
 import com.kotlin.mvvm.event.Message
 import com.kotlin.mvvm.network.ExceptionHandle
 import com.kotlin.mvvm.network.RESULT
@@ -54,13 +55,18 @@ class MainViewModel @Inject constructor() : BaseViewModel() {
             when(view.id) {
                 R.id.ivPlay ->
                 {
-                    item.play = !item.play
+                    var ptvPlayer = (view.parent as View).findViewById<PlayerTextureView>(R.id.ptv_player)
+                    ptvPlayer?.let {
+                        if (!item.play) ptvPlayer.start(item.url) else ptvPlayer.stop()
+                        item.play = !item.play
+                    }
+
                     //_items.value = _items.value!!.toMutableList()
 
-                    if (item.play)
-                        DeviceSurface.get().closeFfmpeg()
-                    else
-                        DeviceSurface.get().openFfmpeg(item.url)
+                    //if (item.play)
+                    //    DeviceSurface.get().closeFfmpeg()
+                    //else
+                    //    DeviceSurface.get().openFfmpeg(item.url)
                 }
                 R.id.ivDetail ->
                 {

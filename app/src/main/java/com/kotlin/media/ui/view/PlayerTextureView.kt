@@ -20,9 +20,8 @@ class PlayerTextureView  : TextureView, TextureView.SurfaceTextureListener {
         ClosingState(5, "关闭中");
     }
 
-
-    var mPlayId : Int = 10;
-    var mWindow: Long? = null
+    var mHandler: Long = 0
+    var mSurface: Surface? = null
 
     constructor(context: Context): this(context, null)
     constructor(context: Context, attrs: AttributeSet?): this(context, attrs, 0)
@@ -30,36 +29,36 @@ class PlayerTextureView  : TextureView, TextureView.SurfaceTextureListener {
         init(context, attrs)
     }
 
-    fun start(url: String) {
-
+    fun start(filename: String) : Boolean{
+        Log.d("native-lib", "start: " + filename)
+        mSurface?.let {
+            Log.d("native-lib", "start2: " + filename)
+            mHandler = DeviceSurface.get().ffmpegOpen(filename, mSurface!!)
+            Log.d("native-lib", "start3: " + filename + " mHandler: " + mHandler)
+            return true
+        }
+        return false
     }
 
     fun stop() {
-
-    }
-
-    fun pause() {
-
+        Log.d("native-lib", "stop: " + mHandler)
+        if (mHandler.compareTo(0) != 0) {
+            Log.d("native-lib", "stop2: " + mHandler)
+            DeviceSurface.get().ffmpegClose(mHandler)
+            mHandler = 0
+        }
     }
 
     fun state() : PlayState {
-        return PlayerTextureView.PlayState.UnconnectedState
+        return PlayState.UnconnectedState
     }
-
-    fun isRuning() : Boolean = true
-    fun isPause() : Boolean = true
-
 
     fun init(context: Context, attrs: AttributeSet?) {
         surfaceTextureListener = this
     }
 
     fun create(surfaceTexture: SurfaceTexture) {
-        mWindow = DeviceSurface.get().append(this.mPlayId, Surface(surfaceTexture))
-    }
-
-    private fun destroy() {
-        this.mWindow?.let { DeviceSurface.get().remove(this.mPlayId, it) }
+        mSurface = Surface(surfaceTexture)
     }
 
     override fun onSurfaceTextureAvailable(surface: SurfaceTexture, width: Int, height: Int) {
@@ -73,7 +72,7 @@ class PlayerTextureView  : TextureView, TextureView.SurfaceTextureListener {
 
     override fun onSurfaceTextureDestroyed(surface: SurfaceTexture): Boolean {
         Log.d("native-lib", "onSurfaceTextureDestroyed")
-        destroy()
+        stop()
         return true
     }
 

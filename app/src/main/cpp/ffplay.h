@@ -22,4 +22,8 @@ void step_to_next_frame(VideoState *is);
 
 void update_volume(VideoState *is, int sign, double step);
 
+const char *stream_filename(VideoState *is);
+
+void *stream_surface(VideoState *is);
+
 #endif //NDKDEMO_FFPLAY_H
