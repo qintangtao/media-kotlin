@@ -12,6 +12,7 @@ VideoState *stream_open(const char *filename, AVInputFormat *iformat, void *surf
 
 void stream_close(VideoState *is);
 
+
 void toggle_pause(VideoState *is);
 
 void toggle_mute(VideoState *is);
@@ -21,6 +22,12 @@ void seek_chapter(VideoState *is, int incr);
 void step_to_next_frame(VideoState *is);
 
 void update_volume(VideoState *is, int sign, double step);
+
+/* 通过事件控制 */
+void stream_pause(VideoState *is);
+
+void stream_resume(VideoState *is);
+
 
 const char *stream_filename(VideoState *is);
 

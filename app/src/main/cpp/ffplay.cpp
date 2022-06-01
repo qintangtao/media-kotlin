@@ -5,7 +5,6 @@
 #include "ffplay.h"
 #include <pthread.h>
 #include <string.h>
-#include "looper.h"
 extern "C"
 {
 #include "libavcodec/jni.h"
@@ -83,8 +82,6 @@ typedef struct PacketQueue {
     int64_t duration;
     int abort_request;
     int serial;
-    //SDL_mutex *mutex;
-    //SDL_cond *cond;
     pthread_mutex_t mutex;
     pthread_cond_t cond;
     VideoState *is;
@@ -138,8 +135,6 @@ typedef struct FrameQueue {
     int max_size;
     int keep_last;
     int rindex_shown;
-    //SDL_mutex *mutex;
-    //SDL_cond *cond;
     pthread_mutex_t mutex;
     pthread_cond_t cond;
     PacketQueue *pktq;
@@ -159,23 +154,54 @@ typedef struct Decoder {
     int pkt_serial;
     int finished;
     int packet_pending;
-    //SDL_cond *empty_queue_cond;
     pthread_cond_t empty_queue_cond;
     int64_t start_pts;
     AVRational start_pts_tb;
     int64_t next_pts;
     AVRational next_pts_tb;
-    //SDL_Thread *decoder_tid;
     pthread_t decoder_tid;
     VideoState *is;
 } Decoder;
 
-class mylooper: public looper {
-    virtual void handle(int what, void* obj);
+
+typedef struct MyEvent {
+    int code;
+    uint8_t *data;
+    int   size;
+}MyEvent;
+
+typedef struct MyEventList {
+    MyEvent evt;
+    struct MyEventList *next;
+} MyEventList;
+
+typedef struct EventQueue {
+    MyEventList *first_event, *last_event;
+    int nb_events;
+    int size;
+    int abort_request;
+    pthread_mutex_t mutex;
+    pthread_cond_t cond;
+    VideoState *is;
+} EventQueue;
+
+typedef struct Looper {
+    EventQueue *queue;
+    pthread_t looper_tid;
+} Looper;
+
+enum {
+    kMsgPause,
+    kMsgResume,
+    kMsgSeek,
 };
 
+
 typedef struct VideoState {
-    //SDL_Thread *read_tid;
+
+    Looper mainloop;
+    EventQueue maine;
+
     pthread_t read_tid;
     AVInputFormat *iformat;
     int abort_request;
@@ -278,7 +304,6 @@ typedef struct VideoState {
 
     int last_video_stream, last_audio_stream, last_subtitle_stream;
 
-    //SDL_cond *continue_read_thread;
     pthread_cond_t continue_read_thread;
 
 
@@ -313,86 +338,7 @@ typedef struct VideoState {
     AVDictionary *format_opts, *codec_opts, *resample_opts;
 
     void *surface;
-
-    mylooper *looper;
 } VideoState;
-
-enum {
-    kMsgVideoRefresh,
-    kMsgCodecBuffer,
-    kMsgPause,
-    kMsgResume,
-    kMsgPauseAck,
-    kMsgDecodeDone,
-    kMsgSeek,
-};
-
-void mylooper::handle(int what, void* obj) {
-    switch (what) {
-        case kMsgVideoRefresh:
-        {
-
-        }
-            break;
-
-        
-#if 0
-        case kMsgCodecBuffer:
-            doCodecWork((workerdata*)obj);
-            break;
-
-        case kMsgDecodeDone:
-        {
-            workerdata *d = (workerdata*)obj;
-            AMediaCodec_stop(d->codec);
-            AMediaCodec_delete(d->codec);
-            AMediaExtractor_delete(d->ex);
-            d->sawInputEOS = true;
-            d->sawOutputEOS = true;
-        }
-            break;
-
-        case kMsgSeek:
-        {
-            workerdata *d = (workerdata*)obj;
-            AMediaExtractor_seekTo(d->ex, 0, AMEDIAEXTRACTOR_SEEK_NEXT_SYNC);
-            AMediaCodec_flush(d->codec);
-            d->renderstart = -1;
-            d->sawInputEOS = false;
-            d->sawOutputEOS = false;
-            if (!d->isPlaying) {
-                d->renderonce = true;
-                post(kMsgCodecBuffer, d);
-            }
-            LOGV("seeked");
-        }
-            break;
-
-        case kMsgPause:
-        {
-            workerdata *d = (workerdata*)obj;
-            if (d->isPlaying) {
-                // flush all outstanding codecbuffer messages with a no-op message
-                d->isPlaying = false;
-                post(kMsgPauseAck, NULL, true);
-            }
-        }
-            break;
-
-        case kMsgResume:
-        {
-            workerdata *d = (workerdata*)obj;
-            if (!d->isPlaying) {
-                d->renderstart = -1;
-                d->isPlaying = true;
-                post(kMsgCodecBuffer, d);
-            }
-        }
-            break;
-#endif
-    }
-}
-
 
 static void print_error(const char *filename, int err)
 {
@@ -737,6 +683,179 @@ static int packet_queue_get(PacketQueue *q, AVPacket *pkt, int block, int *seria
 }
 /**
  * packet_queue end
+ * @param vp
+ */
+
+
+/**
+ * event_queue start
+ * @param vp
+ */
+static int event_queue_put_private(EventQueue *q, MyEvent *evt)
+{
+    MyEventList *evt1;
+
+    if (q->abort_request)
+        return -1;
+
+    evt1 = (MyEventList *)av_malloc(sizeof(MyEventList));
+    if (!evt1)
+        return -1;
+    evt1->evt = *evt;
+    evt1->next = NULL;
+
+    if (!q->last_event)
+        q->first_event = evt1;
+    else
+        q->last_event->next = evt1;
+    q->last_event = evt1;
+    q->nb_events++;
+    q->size += evt1->evt.size + sizeof(*evt1);
+    pthread_cond_signal(&q->cond);
+    return 0;
+}
+
+
+static int event_queue_put(EventQueue *q, MyEvent *evt)
+{
+    int ret;
+
+    pthread_mutex_lock(&q->mutex);
+    ret = event_queue_put_private(q, evt);
+    pthread_mutex_unlock(&q->mutex);
+
+    return ret;
+}
+
+/* packet queue handling */
+static int event_queue_init(EventQueue *e)
+{
+    int i;
+    memset(e, 0, sizeof(EventQueue));
+    if ((i = pthread_mutex_init(&e->mutex, NULL)) != 0) {
+        av_log(NULL, AV_LOG_FATAL, "pthread_mutex_init(): %s\n", strerror(i));
+        return AVERROR(ENOMEM);
+    }
+
+    if ((i = pthread_cond_init(&e->cond, NULL)) != 0) {
+        av_log(NULL, AV_LOG_FATAL, "pthread_cond_init(): %s\n", strerror(i));
+        return AVERROR(ENOMEM);
+    }
+    e->abort_request = 1;
+    return 0;
+}
+
+static void event_queue_flush(EventQueue *e)
+{
+    MyEventList *evt, *evt1;
+
+    pthread_mutex_lock(&e->mutex);
+    for (evt = e->first_event; evt; evt = evt1) {
+        evt1 = evt->next;
+        if (evt->evt.data)
+            av_free(evt->evt.data);
+        av_freep(evt);
+    }
+    e->last_event = NULL;
+    e->first_event = NULL;
+    e->nb_events = 0;
+    e->size = 0;
+    pthread_mutex_unlock(&e->mutex);
+}
+
+static void event_queue_destroy(EventQueue *e)
+{
+    event_queue_flush(e);
+    pthread_mutex_destroy(&e->mutex);
+    pthread_cond_destroy(&e->cond);
+}
+
+static void event_queue_abort(EventQueue *e)
+{
+    pthread_mutex_lock(&e->mutex);
+
+    e->abort_request = 1;
+
+    pthread_cond_signal(&e->cond);
+
+    pthread_mutex_unlock(&e->mutex);
+}
+
+static void event_queue_start(EventQueue *q)
+{
+    pthread_mutex_lock(&q->mutex);
+    q->abort_request = 0;
+    pthread_mutex_unlock(&q->mutex);
+}
+
+/* return < 0 if aborted, 0 if no event and > 0 if event.  block = 0 is break, = 1 wait event*/
+static int event_queue_get(EventQueue *e, MyEvent *evt, int block)
+{
+    MyEventList *evt1;
+    int ret;
+
+    pthread_mutex_lock(&e->mutex);
+
+    for (;;) {
+        if (e->abort_request) {
+            ret = -1;
+            break;
+        }
+
+        evt1 = e->first_event;
+        if (evt1) {
+            e->first_event = evt1->next;
+            if (!e->first_event)
+                e->last_event = NULL;
+            e->nb_events--;
+            e->size -= evt1->evt.size + sizeof(*evt1);
+            *evt = evt1->evt;
+            av_free(evt1);
+            ret = 1;
+            break;
+        } else if (!block) {
+            ret = 0;
+            break;
+        } else {
+            pthread_cond_wait(&e->cond, &e->mutex);
+        }
+    }
+    pthread_mutex_unlock(&e->mutex);
+    return ret;
+}
+
+
+static void looper_init(Looper *l, EventQueue *queue) {
+    memset(l, 0, sizeof(Looper));
+    l->queue = queue;
+}
+static int looper_start(Looper *l, void *(*fn)(void *), const char *thread_name, void* arg)
+{
+    int i;
+    event_queue_start(l->queue);
+
+    if ((i = pthread_create(&l->looper_tid, NULL, fn, arg)) != 0) {
+        av_log(NULL, AV_LOG_ERROR, "pthread_create(): %s:%s\n", thread_name, strerror(i));
+        return AVERROR(ENOMEM);
+    }
+
+    av_log(NULL, AV_LOG_DEBUG, "looper_start(): %s\n", thread_name);
+
+    return 0;
+}
+static void looper_abort(Looper *l)
+{
+    event_queue_abort(l->queue);
+    pthread_join(l->looper_tid, 0);
+    l->looper_tid = NULL;
+}
+static void looper_destroy(Looper *l) {
+    //av_packet_unref(&d->pkt);
+    //avcodec_free_context(&d->avctx);
+}
+
+/**
+ * event_queue end
  * @param vp
  */
 
@@ -1307,7 +1426,7 @@ static int stream_component_open(VideoState *is, int stream_index)
     enum AVHWDeviceType hw_type;
     AVMediaCodecContext *media_codec_ctx = NULL;
 
-    av_log(NULL, AV_LOG_DEBUG, "stream_component_open %d\n", stream_index);
+    av_log(NULL, AV_LOG_DEBUG, "stream_component_open stream_index:%d\n", stream_index);
 
     if (stream_index < 0 || stream_index >= ic->nb_streams)
         return -1;
@@ -1377,7 +1496,7 @@ static int stream_component_open(VideoState *is, int stream_index)
     avctx->pkt_timebase = ic->streams[stream_index]->time_base;
 
 
-    av_log(NULL, AV_LOG_DEBUG, "stream_component_open %d\n", stream_index+1);
+    av_log(NULL, AV_LOG_DEBUG, "stream_component_open stream_index:%d, codec_id:%d\n", stream_index, avctx->codec_id);
 
     codec = avcodec_find_decoder(avctx->codec_id);
 
@@ -1397,7 +1516,7 @@ static int stream_component_open(VideoState *is, int stream_index)
         goto fail;
     }
 
-    av_log(NULL, AV_LOG_DEBUG, "stream_component_open %d, %s\n", stream_index+1+1, forced_codec_name);
+    av_log(NULL, AV_LOG_DEBUG, "stream_component_open stream_index:%d, forced_codec_name:%s, codec_name:%s\n", stream_index, forced_codec_name, codec->name);
 
     avctx->codec_id = codec->id;
     if (stream_lowres > codec->max_lowres) {
@@ -1409,8 +1528,6 @@ static int stream_component_open(VideoState *is, int stream_index)
 
     if (is->fast)
         avctx->flags2 |= AV_CODEC_FLAG2_FAST;
-
-    av_log(NULL, AV_LOG_DEBUG, "stream_component_open %d\n", stream_index+1+1+1);
 
     //opts = filter_codec_opts(is->codec_opts, avctx->codec_id, ic, ic->streams[stream_index], codec);
     if (!av_dict_get(opts, "threads", NULL, 0))
@@ -1430,7 +1547,8 @@ static int stream_component_open(VideoState *is, int stream_index)
         goto fail;
     }
 #endif
-    av_log(NULL, AV_LOG_DEBUG, "stream_component_open %d\n", stream_index+1+1+1+1);
+
+    av_log(NULL, AV_LOG_DEBUG, "stream_component_open stream_index:%d open success\n", stream_index);
 
     is->eof = 0;
     ic->streams[stream_index]->discard = AVDISCARD_DEFAULT;
@@ -1706,7 +1824,10 @@ static void *read_thread(void *arg) {
     }
     err = avformat_open_input(&ic, is->filename, is->iformat, &format_opts);
 #else
-    err = avformat_open_input(&ic, is->filename, is->iformat, NULL);
+
+    av_dict_set(&format_opts,"rtsp_transport","tcp",0);
+
+    err = avformat_open_input(&ic, is->filename, is->iformat, &format_opts);
 #endif
     if (err < 0) {
         print_error(is->filename, err);
@@ -1981,6 +2102,41 @@ static void *read_thread(void *arg) {
     return 0;
 }
 
+static void *main_thread(void *arg) {
+    VideoState *is = (VideoState *) arg;
+    int ret;
+    MyEvent event;
+
+    av_log(NULL, AV_LOG_DEBUG, "main_thread enter\n");
+
+    for (; ; ) {
+        // 显示图像
+
+        //获取事件
+        ret = event_queue_get(is->mainloop.queue, &event, 1);
+        if (ret < 0)
+            break;
+
+        if (ret == 0)
+            continue;
+
+        // 处理event
+        switch (event.code) {
+            case kMsgPause:
+                toggle_pause(is);
+                break;
+            case kMsgResume:
+                toggle_pause(is);
+                break;
+        }
+    }
+
+
+    av_log(NULL, AV_LOG_DEBUG, "main_thread leave\n");
+
+    return 0;
+}
+
 VideoState *stream_open(const char *filename, AVInputFormat *iformat, void *surface)
 {
     VideoState *is;
@@ -2010,8 +2166,8 @@ VideoState *stream_open(const char *filename, AVInputFormat *iformat, void *surf
     is->loop                    = 1;
     is->autoexit                = 1;
 
-    is->start_time      = AV_NOPTS_VALUE;
-    is->duration        = AV_NOPTS_VALUE;
+    is->start_time              = AV_NOPTS_VALUE;
+    is->duration                = AV_NOPTS_VALUE;
 
     is->audio_disable       = 0;
     is->video_disable       = 0;
@@ -2045,6 +2201,11 @@ VideoState *stream_open(const char *filename, AVInputFormat *iformat, void *surf
     is->audioq.is = is;
     is->subtitleq.is = is;
 
+    if (event_queue_init(&is->maine) < 0)
+        goto fail;
+
+    is->maine.is = is;
+
     if ((ret = pthread_cond_init(&is->continue_read_thread, NULL)) != 0) {
         av_log(NULL, AV_LOG_FATAL, "pthread_cond_init(): %s\n", strerror(ret));
         goto fail;
@@ -2071,13 +2232,20 @@ VideoState *stream_open(const char *filename, AVInputFormat *iformat, void *surf
 
     if ((ret = pthread_create(&is->read_tid, NULL, read_thread, is)) != 0) {
         av_log(NULL, AV_LOG_FATAL, "pthread_create(): %s\n", strerror(ret));
-        fail:
-        stream_close(is);
-        return NULL;
+        goto fail;
     }
+
+    looper_init(&is->mainloop, &is->maine);
+
+    if ((ret = looper_start(&is->mainloop, main_thread, "main_looper", is)) < 0)
+        goto fail;
 
     av_log(NULL, AV_LOG_DEBUG, "stream_open Success %s\n", filename);
     return is;
+
+fail:
+    stream_close(is);
+    return NULL;
 }
 
 void stream_close(VideoState *is)
@@ -2098,6 +2266,9 @@ void stream_close(VideoState *is)
     if (is->subtitle_stream >= 0)
         stream_component_close(is, is->subtitle_stream);
 
+    looper_abort(&is->mainloop);
+    looper_destroy(&is->mainloop);
+
     avformat_close_input(&is->ic);
 
     packet_queue_destroy(&is->videoq);
@@ -2108,6 +2279,8 @@ void stream_close(VideoState *is)
     frame_queue_destory(&is->pictq);
     frame_queue_destory(&is->sampq);
     frame_queue_destory(&is->subpq);
+
+    event_queue_destroy(&is->maine);
 
     pthread_cond_destroy(&is->continue_read_thread);
     //sws_freeContext(is->img_convert_ctx);
@@ -2123,6 +2296,24 @@ void stream_close(VideoState *is)
         SDL_DestroyTexture(is->sub_texture);
 #endif
     av_free(is);
+}
+
+void stream_pause(VideoState *is)
+{
+    MyEvent evt;
+    evt.code = kMsgPause;
+    evt.data = 0;
+    evt.size = 0;
+    event_queue_put(&is->maine, &evt);
+}
+
+void stream_resume(VideoState *is)
+{
+    MyEvent evt;
+    evt.code = kMsgResume;
+    evt.data = 0;
+    evt.size = 0;
+    event_queue_put(&is->maine, &evt);
 }
 
 const char *stream_filename(VideoState *is)
