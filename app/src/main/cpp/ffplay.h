@@ -8,29 +8,36 @@
 typedef struct VideoState VideoState;
 typedef struct AVInputFormat AVInputFormat;
 
+enum ffEvent{
+    FF_EVENT_TOOGLE_PAUSE=0,      //暂停
+    FF_EVENT_TOOGLE_MUTE,       //静音
+    FF_EVENT_INC_VOLUME,        //静音加
+    FF_EVENT_DEC_VOLUME,        //静音减
+    FF_EVENT_NEXT_FRAME,         //下一帧
+    FF_EVENT_FAST_BACK,         //后退
+    FF_EVENT_FAST_FORWARD,      //快进
+
+};
+
 VideoState *stream_open(const char *filename, AVInputFormat *iformat, void *surface);
 
 void stream_close(VideoState *is);
 
-
-void toggle_pause(VideoState *is);
-
-void toggle_mute(VideoState *is);
-
-void seek_chapter(VideoState *is, int incr);
-
-void step_to_next_frame(VideoState *is);
-
-void update_volume(VideoState *is, int sign, double step);
-
 /* 通过事件控制 */
-void stream_pause(VideoState *is);
+void send_event(VideoState *is, enum ffEvent e);
 
-void stream_resume(VideoState *is);
+//seek by bytes 0=off 1=on -1=auto
+void set_seek_by_bytes(VideoState *is, int seek_by_bytes);
 
+void set_seek_interval(VideoState *is, int seek_interval);
+
+bool is_paused(VideoState *is);
+
+bool is_mute(VideoState *is);
 
 const char *stream_filename(VideoState *is);
 
 void *stream_surface(VideoState *is);
+
 
 #endif //NDKDEMO_FFPLAY_H

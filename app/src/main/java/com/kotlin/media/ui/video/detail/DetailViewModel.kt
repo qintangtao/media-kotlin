@@ -16,8 +16,7 @@ class DetailViewModel : BaseViewModel() {
     val listenner = object : OnItemClickListener<Video> {
         override fun onClick(view: View, item: Video) {
             when(view.id) {
-                R.id.ivPlay ->
-                {
+                R.id.ivPlay -> {
                     var ptvPlayer = (view.parent as View).findViewById<PlayerTextureView>(R.id.ptv_player)
 
                     Log.d("native-lib", "DetailViewModel.ivPlay: " + ptvPlayer)
@@ -27,10 +26,15 @@ class DetailViewModel : BaseViewModel() {
                         item.play = !item.play
                         _itemBean.value = item
                     }
-                    //if (item.play)
-                    //    DeviceSurface.get().closeFfmpeg()
-                    //else
-                    //    DeviceSurface.get().openFfmpeg(item.url)
+                }
+                R.id.ivPaused -> {
+                    var ptvPlayer = (view.parent as View).findViewById<PlayerTextureView>(R.id.ptv_player)
+
+                    Log.d("native-lib", "DetailViewModel.ivPaused: " + ptvPlayer)
+
+                    ptvPlayer?.let {
+                        ptvPlayer.tooglePause()
+                    }
                 }
             }
         }

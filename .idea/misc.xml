@@ -3,6 +3,12 @@
   <component name="DesignSurface">
     <option name="filePathToZoomLevelMap">
       <map>
+        <entry key="..\:/Qt/Qt5.12.2/Licenses/open/media-kotlin/app/src/main/res/drawable/ic_baseline_pause_circle_filled_24.xml" value="0.2205" />
+        <entry key="..\:/Qt/Qt5.12.2/Licenses/open/media-kotlin/app/src/main/res/drawable/ic_baseline_play_circle_filled_24.xml" value="0.2205" />
+        <entry key="..\:/Qt/Qt5.12.2/Licenses/open/media-kotlin/app/src/main/res/drawable/ic_chevron_right_black_24dp.xml" value="0.2205" />
+        <entry key="..\:/Qt/Qt5.12.2/Licenses/open/media-kotlin/app/src/main/res/drawable/ic_close_black_24dp.xml" value="0.2205" />
+        <entry key="..\:/Qt/Qt5.12.2/Licenses/open/media-kotlin/app/src/main/res/drawable/selector_video_paused.xml" value="0.2205" />
+        <entry key="..\:/Qt/Qt5.12.2/Licenses/open/media-kotlin/app/src/main/res/drawable/selector_video_play.xml" value="0.2205" />
         <entry key="..\:/Qt/Qt5.12.2/Licenses/open/media-kotlin/app/src/main/res/layout-land/activity_main.xml" value="0.349647266313933" />
         <entry key="..\:/Qt/Qt5.12.2/Licenses/open/media-kotlin/app/src/main/res/layout-land/item_video.xml" value="0.349647266313933" />
         <entry key="..\:/Qt/Qt5.12.2/Licenses/open/media-kotlin/app/src/main/res/layout/activity_detail.xml" value="0.245018115942029" />

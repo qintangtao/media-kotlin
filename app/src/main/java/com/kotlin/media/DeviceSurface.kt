@@ -23,11 +23,12 @@ class DeviceSurface {
 
     external fun closeFfmpeg()
 
-    external fun pauseFfmpeg()
-
     external fun ffmpegOpen(filename: String,  surface: Surface) : Long
 
     external fun ffmpegClose(handle: Long)
+
+    external fun ffmpegSendEvent(handle: Long, code: Long)
+
 
     companion object {
         // Used to load the 'native-lib' library on application startup.

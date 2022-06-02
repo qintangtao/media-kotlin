@@ -659,16 +659,6 @@ Java_com_kotlin_media_DeviceSurface_closeFfmpeg(
     is = NULL;
 }
 
-extern "C" JNIEXPORT void JNICALL
-Java_com_kotlin_media_DeviceSurface_pauseFfmpeg(
-        JNIEnv* env,
-        jobject /* this */) {
-
-    //close_media(g_media_ctx);
-    if (is)
-        toggle_pause(is);
-}
-
 
 extern "C" JNIEXPORT jlong JNICALL
 Java_com_kotlin_media_DeviceSurface_ffmpegOpen(
@@ -705,7 +695,21 @@ Java_com_kotlin_media_DeviceSurface_ffmpegClose(
 
     env->DeleteGlobalRef(gsurface);
 }
+extern "C" JNIEXPORT void JNICALL
+Java_com_kotlin_media_DeviceSurface_ffmpegSendEvent(
+        JNIEnv* env,
+        jobject /* this */,
+        jlong handle,
+        jlong code) {
 
+    VideoState *is = (VideoState *)handle;
+
+    const char *utf8 = stream_filename(is);
+
+    LOGV("send event file: %s, code: %d\n", utf8, code);
+
+    send_event(is, static_cast<ffEvent>(code));
+}
 
 
 void print_ffmpeg_info()

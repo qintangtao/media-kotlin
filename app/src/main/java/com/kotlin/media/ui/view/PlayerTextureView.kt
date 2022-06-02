@@ -20,6 +20,14 @@ class PlayerTextureView  : TextureView, TextureView.SurfaceTextureListener {
         ClosingState(5, "关闭中");
     }
 
+    enum class ffEvent(val code: Long){
+        FF_EVENT_TOOGLE_PAUSE(0),      //暂停
+        FF_EVENT_TOOGLE_MUTE(1),       //静音
+        FF_EVENT_INC_VOLUME(2),        //静音加
+        FF_EVENT_DEC_VOLUME(3),        //静音减
+        FF_EVENT_NEXT_FRAME(4);         //下一帧
+    };
+
     var mHandler: Long = 0
     var mSurface: Surface? = null
 
@@ -48,6 +56,21 @@ class PlayerTextureView  : TextureView, TextureView.SurfaceTextureListener {
             mHandler = 0
         }
     }
+
+    fun tooglePause() {
+        Log.d("native-lib", "tooglePause: " + mHandler)
+        if (mHandler.compareTo(0) != 0) {
+            DeviceSurface.get().ffmpegSendEvent(mHandler, ffEvent.FF_EVENT_TOOGLE_PAUSE.code)
+        }
+    }
+
+    fun toogleMute() {
+        Log.d("native-lib", "toogleMute: " + mHandler)
+        if (mHandler.compareTo(0) != 0) {
+            DeviceSurface.get().ffmpegSendEvent(mHandler, ffEvent.FF_EVENT_TOOGLE_MUTE.code)
+        }
+    }
+
 
     fun state() : PlayState {
         return PlayState.UnconnectedState
