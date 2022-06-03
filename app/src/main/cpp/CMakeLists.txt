@@ -33,6 +33,7 @@ add_library( # Sets the name of the library.
         ffplay.cpp
         looper.cpp
         common.cpp
+        opensl_io.c
         yuv_util.cpp
         time_util.cpp)
 
@@ -111,6 +112,7 @@ target_link_libraries( # Specifies the target library.
                         libavcodec
                         libavformat
                         #libavdevice
+                        OpenSLES
                         android
                        # Links the target library to the log library
                        # included in the NDK.

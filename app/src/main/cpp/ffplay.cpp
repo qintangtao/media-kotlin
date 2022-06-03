@@ -16,6 +16,8 @@ extern "C"
 #include "libavutil/hwcontext_mediacodec.h"
 #include "libavutil/time.h"
 #include "libavutil/avutil.h"
+#include "libavutil/channel_layout.h"
+#include "opensl_io.h"
 };
 
 
@@ -200,6 +202,8 @@ typedef struct VideoState {
 
     Looper looper;
     EventQueue eventq;
+
+    OPENSL_STREAM* audios;
 
     pthread_t read_tid;
     AVInputFormat *iformat;
@@ -1424,6 +1428,144 @@ static void *subtitle_thread(void *arg) {
     return 0;
 }
 
+#define SAMPLERATE 44100
+#define CHANNELS 1
+#define PERIOD_TIME 20 //ms
+#define FRAME_SIZE SAMPLERATE*PERIOD_TIME/1000
+
+static int audio_open(VideoState *is, int64_t wanted_channel_layout, int wanted_nb_channels, int wanted_sample_rate, struct AudioParams *audio_hw_params)
+{
+    //freq 指定了每秒向音频设备发送的 sample 数。常用的值为：11025，22050，44100。值越高质量越好。
+    //format 指定了每个 sample 元素的大小和类型。可能取值如下：
+    //channels 指定了声音的通道数：1（单声道）2（立体声）。
+    //samples 这个值表示音频缓存区的大小（以 sample 计）。一个 sample 是一段大小为 format * channels 的音频数据。
+    //size 这个值表示音频缓存区的大小（以 byte 计）。
+
+#if 1
+    static const int next_nb_channels[] = {0, 0, 1, 6, 2, 6, 4, 6};
+    static const int next_sample_rates[] = {0, 44100, 48000, 96000, 192000};
+    int next_sample_rate_idx = FF_ARRAY_ELEMS(next_sample_rates) - 1;
+
+    if (!wanted_channel_layout || wanted_nb_channels != av_get_channel_layout_nb_channels(wanted_channel_layout)) {
+        wanted_channel_layout = av_get_default_channel_layout(wanted_nb_channels);
+        wanted_channel_layout &= ~AV_CH_LAYOUT_STEREO_DOWNMIX;
+    }
+
+    wanted_nb_channels = av_get_channel_layout_nb_channels(wanted_channel_layout);
+    int channels = wanted_nb_channels;
+
+    int freq = wanted_sample_rate;
+    if (freq <= 0 || channels <= 0) {
+        av_log(NULL, AV_LOG_ERROR, "Invalid sample rate or channel count!\n");
+        return -1;
+    }
+    while (next_sample_rate_idx && next_sample_rates[next_sample_rate_idx] >= freq)
+        next_sample_rate_idx--;
+
+    //wanted_spec.format = AUDIO_S16SYS;
+    //wanted_spec.silence = 0;
+    int samples = FFMAX(SDL_AUDIO_MIN_BUFFER_SIZE, 2 << av_log2(freq / SDL_AUDIO_MAX_CALLBACKS_PER_SEC));
+    //wanted_spec.callback = sdl_audio_callback;
+    //wanted_spec.userdata = opaque;
+
+
+    //int sr, int inchannels, int outchannels, int bufferframes
+    //OPENSL_STREAM* stream = android_OpenAudioDevice(SAMPLERATE, CHANNELS, CHANNELS, FRAME_SIZE);
+    OPENSL_STREAM* stream = android_OpenAudioDevice(freq, channels, channels, FRAME_SIZE);
+    if (stream == NULL) {
+        av_log(NULL, AV_LOG_ERROR, "failed to open audio device ! \n");
+        return -1;
+    }
+
+    audio_hw_params->fmt = AV_SAMPLE_FMT_S16;
+    audio_hw_params->freq = freq;
+    audio_hw_params->channel_layout = wanted_channel_layout;
+    audio_hw_params->channels =  channels;
+    audio_hw_params->frame_size = av_samples_get_buffer_size(NULL, audio_hw_params->channels, 1, audio_hw_params->fmt, 1);
+    audio_hw_params->bytes_per_sec = av_samples_get_buffer_size(NULL, audio_hw_params->channels, audio_hw_params->freq, audio_hw_params->fmt, 1);
+    if (audio_hw_params->bytes_per_sec <= 0 || audio_hw_params->frame_size <= 0) {
+        av_log(NULL, AV_LOG_ERROR, "av_samples_get_buffer_size failed\n");
+        android_CloseAudioDevice(stream);
+        return -1;
+    }
+
+    is->audios = stream;
+    //return spec.size;
+    return 1;
+
+#else
+    SDL_AudioSpec wanted_spec, spec;
+    const char *env;
+    static const int next_nb_channels[] = {0, 0, 1, 6, 2, 6, 4, 6};
+    static const int next_sample_rates[] = {0, 44100, 48000, 96000, 192000};
+    int next_sample_rate_idx = FF_ARRAY_ELEMS(next_sample_rates) - 1;
+
+    env = SDL_getenv("SDL_AUDIO_CHANNELS");
+    if (env) {
+        wanted_nb_channels = atoi(env);
+        wanted_channel_layout = av_get_default_channel_layout(wanted_nb_channels);
+    }
+    if (!wanted_channel_layout || wanted_nb_channels != av_get_channel_layout_nb_channels(wanted_channel_layout)) {
+        wanted_channel_layout = av_get_default_channel_layout(wanted_nb_channels);
+        wanted_channel_layout &= ~AV_CH_LAYOUT_STEREO_DOWNMIX;
+    }
+    wanted_nb_channels = av_get_channel_layout_nb_channels(wanted_channel_layout);
+    wanted_spec.channels = wanted_nb_channels;
+    wanted_spec.freq = wanted_sample_rate;
+    if (wanted_spec.freq <= 0 || wanted_spec.channels <= 0) {
+        av_log(NULL, AV_LOG_ERROR, "Invalid sample rate or channel count!\n");
+        return -1;
+    }
+    while (next_sample_rate_idx && next_sample_rates[next_sample_rate_idx] >= wanted_spec.freq)
+        next_sample_rate_idx--;
+    wanted_spec.format = AUDIO_S16SYS;
+    wanted_spec.silence = 0;
+    wanted_spec.samples = FFMAX(SDL_AUDIO_MIN_BUFFER_SIZE, 2 << av_log2(wanted_spec.freq / SDL_AUDIO_MAX_CALLBACKS_PER_SEC));
+    wanted_spec.callback = sdl_audio_callback;
+    wanted_spec.userdata = opaque;
+    while (!(audio_dev = SDL_OpenAudioDevice(NULL, 0, &wanted_spec, &spec, SDL_AUDIO_ALLOW_FREQUENCY_CHANGE | SDL_AUDIO_ALLOW_CHANNELS_CHANGE))) {
+        av_log(NULL, AV_LOG_WARNING, "SDL_OpenAudio (%d channels, %d Hz): %s\n",
+               wanted_spec.channels, wanted_spec.freq, SDL_GetError());
+        wanted_spec.channels = next_nb_channels[FFMIN(7, wanted_spec.channels)];
+        if (!wanted_spec.channels) {
+            wanted_spec.freq = next_sample_rates[next_sample_rate_idx--];
+            wanted_spec.channels = wanted_nb_channels;
+            if (!wanted_spec.freq) {
+                av_log(NULL, AV_LOG_ERROR,
+                       "No more combinations to try, audio open failed\n");
+                return -1;
+            }
+        }
+        wanted_channel_layout = av_get_default_channel_layout(wanted_spec.channels);
+    }
+    if (spec.format != AUDIO_S16SYS) {
+        av_log(NULL, AV_LOG_ERROR,
+               "SDL advised audio format %d is not supported!\n", spec.format);
+        return -1;
+    }
+    if (spec.channels != wanted_spec.channels) {
+        wanted_channel_layout = av_get_default_channel_layout(spec.channels);
+        if (!wanted_channel_layout) {
+            av_log(NULL, AV_LOG_ERROR,
+                   "SDL advised channel count %d is not supported!\n", spec.channels);
+            return -1;
+        }
+    }
+
+    audio_hw_params->fmt = AV_SAMPLE_FMT_S16;
+    audio_hw_params->freq = spec.freq;
+    audio_hw_params->channel_layout = wanted_channel_layout;
+    audio_hw_params->channels =  spec.channels;
+    audio_hw_params->frame_size = av_samples_get_buffer_size(NULL, audio_hw_params->channels, 1, audio_hw_params->fmt, 1);
+    audio_hw_params->bytes_per_sec = av_samples_get_buffer_size(NULL, audio_hw_params->channels, audio_hw_params->freq, audio_hw_params->fmt, 1);
+    if (audio_hw_params->bytes_per_sec <= 0 || audio_hw_params->frame_size <= 0) {
+        av_log(NULL, AV_LOG_ERROR, "av_samples_get_buffer_size failed\n");
+        return -1;
+    }
+    return spec.size;
+#endif
+}
+
 /* open a given stream. Return 0 if OK */
 static int stream_component_open(VideoState *is, int stream_index)
 {
@@ -1589,7 +1731,7 @@ static int stream_component_open(VideoState *is, int stream_index)
             channel_layout = avctx->channel_layout;
 #endif
 
-#if 0
+#if 1
             /* prepare audio output */
             if ((ret = audio_open(is, channel_layout, nb_channels, sample_rate, &is->audio_tgt)) < 0)
                 goto fail;
@@ -1616,7 +1758,7 @@ static int stream_component_open(VideoState *is, int stream_index)
             if ((ret = decoder_start(&is->auddec, audio_thread, "audio_decoder", is)) < 0)
                 goto out;
             is->viddec.is = is;
-            SDL_PauseAudioDevice(audio_dev, 0);
+            //SDL_PauseAudioDevice(audio_dev, 0);
 #endif
             break;
         case AVMEDIA_TYPE_VIDEO:
@@ -2435,7 +2577,6 @@ static void video_display(VideoState *is)
     //SDL_RenderPresent(renderer);
 }
 
-
 /* called to display each frame */
 static void video_refresh(VideoState *is, double *remaining_time)
 {
@@ -2732,6 +2873,8 @@ VideoState *stream_open(const char *filename, AVInputFormat *iformat, void *surf
 
     is->rdftspeed               = 0.02;
     is->audio_callback_time     = 0;
+
+    is->audios                  = 0;
 
     memset(is->wanted_stream_spec, 0, sizeof(is->wanted_stream_spec));
 
