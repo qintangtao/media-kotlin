@@ -86,12 +86,11 @@ android {
         pickFirst 'lib/armeabi-v7a/libavformat.so'
         pickFirst 'lib/x86/libavformat.so'
         pickFirst 'lib/x86_64/libavformat.so'
-/*
-        pickFirst 'lib/arm64-v8a/libavdevice.so'
-        pickFirst 'lib/armeabi-v7a/libavdevice.so'
-        pickFirst 'lib/x86/libavdevice.so'
-        pickFirst 'lib/x86_64/libavdevice.so'
-*/
+
+        pickFirst 'lib/arm64-v8a/libswscale.so'
+        pickFirst 'lib/armeabi-v7a/libswscale.so'
+        pickFirst 'lib/x86/libswscale.so'
+        pickFirst 'lib/x86_64/libswscale.so'
     }
     configurations.all() {
         resolutionStrategy.force "org.antlr:antlr4-runtime:4.5.3"

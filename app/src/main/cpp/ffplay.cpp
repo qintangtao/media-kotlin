@@ -6,7 +6,9 @@
 #include <pthread.h>
 #include <string.h>
 #include <inttypes.h>
-
+#include <android/native_window_jni.h>
+#include <jni.h>
+#include "yuv_util.h"
 extern "C"
 {
 #include "libavcodec/jni.h"
@@ -17,6 +19,8 @@ extern "C"
 #include "libavutil/time.h"
 #include "libavutil/avutil.h"
 #include "libavutil/channel_layout.h"
+#include "libavutil/imgutils.h"
+#include "libswscale/swscale.h"
 #include "opensl_io.h"
 };
 
@@ -195,9 +199,6 @@ typedef struct Looper {
 } Looper;
 
 
-
-
-
 typedef struct VideoState {
 
     Looper looper;
@@ -288,7 +289,7 @@ typedef struct VideoState {
     AVStream *video_st;
     PacketQueue videoq;
     double max_frame_duration;      // maximum duration of a frame - above this, we consider the jump a timestamp discontinuity
-    //struct SwsContext *img_convert_ctx;
+    struct SwsContext *img_convert_ctx;
     //struct SwsContext *sub_convert_ctx;
     int eof;
 
@@ -348,7 +349,21 @@ typedef struct VideoState {
     AVDictionary *format_opts, *codec_opts, *resample_opts;
 
     void *surface;
+    ANativeWindow *window;
+
+    //android
+    int window_format;
 } VideoState;
+
+
+static const struct AndroidFormatEntry {
+    enum AVPixelFormat format;
+    int android_fmt;
+} android_format_map[] = {
+        { AV_PIX_FMT_RGBA,          WINDOW_FORMAT_RGBA_8888 },
+        { AV_PIX_FMT_RGBA,          WINDOW_FORMAT_RGBX_8888 },
+        { AV_PIX_FMT_RGB565,         WINDOW_FORMAT_RGB_565 }
+};
 
 static void print_error(const char *filename, int err)
 {
@@ -1616,7 +1631,7 @@ static int stream_component_open(VideoState *is, int stream_index)
             }
         }
 
-        if (is->surface)
+        if (false && is->surface)
         {
             hw_type = av_hwdevice_find_type_by_name("mediacodec");
             if (hw_type == AV_HWDEVICE_TYPE_NONE) {
@@ -2321,6 +2336,156 @@ static void update_video_pts(VideoState *is, double pts, int64_t pos, int serial
     sync_clock_to_slave(&is->extclk, &is->vidclk);
 }
 
+static JavaVM *java_vm;
+static pthread_key_t current_env;
+static pthread_once_t once = PTHREAD_ONCE_INIT;
+static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
+
+static void jni_detach_env(void *data)
+{
+    if (java_vm) {
+        (*java_vm).DetachCurrentThread();
+    }
+}
+
+static void jni_create_pthread_key(void)
+{
+    pthread_key_create(&current_env, jni_detach_env);
+}
+
+JNIEnv *ff_jni_get_env(void *log_ctx)
+{
+    int ret = 0;
+    JNIEnv *env = NULL;
+
+    pthread_mutex_lock(&lock);
+    if (java_vm == NULL) {
+        java_vm = static_cast<JavaVM *>(av_jni_get_java_vm(log_ctx));
+    }
+
+    if (!java_vm) {
+        av_log(log_ctx, AV_LOG_ERROR, "No Java virtual machine has been registered\n");
+        goto done;
+    }
+
+    pthread_once(&once, jni_create_pthread_key);
+
+    if ((env = static_cast<JNIEnv *>(pthread_getspecific(current_env))) != NULL) {
+        goto done;
+    }
+
+    ret = (*java_vm).GetEnv((void **)&env, JNI_VERSION_1_6);
+    switch(ret) {
+        case JNI_EDETACHED:
+            if ((*java_vm).AttachCurrentThread(&env, NULL) != 0) {
+                av_log(log_ctx, AV_LOG_ERROR, "Failed to attach the JNI environment to the current thread\n");
+                env = NULL;
+            } else {
+                pthread_setspecific(current_env, env);
+            }
+            break;
+        case JNI_OK:
+            break;
+        case JNI_EVERSION:
+            av_log(log_ctx, AV_LOG_ERROR, "The specified JNI version is not supported\n");
+            break;
+        default:
+            av_log(log_ctx, AV_LOG_ERROR, "Failed to get the JNI environment attached to this thread\n");
+            break;
+    }
+
+    done:
+    pthread_mutex_unlock(&lock);
+    return env;
+}
+
+static void get_android_pix_fmt(int format, enum AVPixelFormat *pix_fmt)
+{
+    int i;
+    for (i = 0; i < FF_ARRAY_ELEMS(android_format_map) - 1; i++) {
+        if (format == android_format_map[i].android_fmt) {
+            *pix_fmt = android_format_map[i].format;
+            return;
+        }
+    }
+}
+
+/*
+static int realloc_texture(ANativeWindow *window, int new_format, int new_width, int new_height, int init_texture)
+{
+    int format;
+    int access, w, h;
+
+    int32_t old_width = ANativeWindow_getWidth(m_window);
+    if (old_width != width)
+        break;
+
+    int32_t old_height = ANativeWindow_getHeight(m_window);
+    if (old_height != height)
+        break;
+
+    int32_t old_format = ANativeWindow_getFormat(m_window);
+    if (old_format != format)
+        break;
+    if (window && SDL_QueryTexture(*texture, &format, &access, &w, &h) < 0 || new_width != w || new_height != h || new_format != format) {
+        void *pixels;
+        int pitch;
+        if (*texture)
+            SDL_DestroyTexture(*texture);
+        if (!(*texture = SDL_CreateTexture(renderer, new_format, SDL_TEXTUREACCESS_STREAMING, new_width, new_height)))
+            return -1;
+        if (SDL_SetTextureBlendMode(*texture, blendmode) < 0)
+            return -1;
+        if (init_texture) {
+            if (SDL_LockTexture(*texture, NULL, &pixels, &pitch) < 0)
+                return -1;
+            memset(pixels, 0, pitch * new_height);
+            SDL_UnlockTexture(*texture);
+        }
+        av_log(NULL, AV_LOG_VERBOSE, "Created %dx%d texture with %s.\n", new_width, new_height, SDL_GetPixelFormatName(new_format));
+    }
+    return 0;
+}*/
+
+static int upload_texture(VideoState *is, AVFrame *frame, struct SwsContext **img_convert_ctx) {
+
+    int ret;
+    uint8_t *pixels[4];
+    int pitch[4];
+
+    enum AVPixelFormat pix_fmt;
+    get_android_pix_fmt(is->window_format, &pix_fmt);
+
+    *img_convert_ctx = sws_getCachedContext(*img_convert_ctx,
+                                            frame->width, frame->height,
+                                            static_cast<AVPixelFormat>(frame->format), frame->width, frame->height,
+                                            pix_fmt, SWS_BICUBIC, NULL, NULL, NULL);
+
+    /* buffer is going to be written to rawvideo file, no alignment */
+    if ((ret = av_image_alloc(pixels, pitch,
+                              frame->width, frame->height, pix_fmt, 1)) < 0) {
+        av_log(NULL, AV_LOG_FATAL, "Could not allocate destination image\n");
+        return -1;
+    }
+
+    sws_scale(is->img_convert_ctx, (const uint8_t * const *)frame->data, frame->linesize,
+              0, frame->height, pixels, pitch);
+
+    ANativeWindow_Buffer window_buffer;
+    if (ANativeWindow_lock(is->window, &window_buffer, 0))
+    {
+        av_log(NULL, AV_LOG_FATAL, "lock window failed %d\n", is->window);
+        goto end;
+    }
+
+    memcpy(window_buffer.bits, pixels[0], ret);
+
+    ANativeWindow_unlockAndPost(is->window);
+
+    end:
+    av_freep(&pixels[0]);
+    return 0;
+}
 
 static void video_image_display(VideoState *is)
 {
@@ -2329,14 +2494,39 @@ static void video_image_display(VideoState *is)
 
     vp = frame_queue_peek_last(&is->pictq);
 #if 1
-    if (is->surface)
+    if (!is->window && is->surface) {
+        //AVCodecContext *avctx
+
+        JNIEnv *env = ff_jni_get_env(is->viddec.avctx);
+        if (!env) {
+            av_log(NULL, AV_LOG_FATAL, "jni_get_env failed\n");
+            return;
+        }
+
+        av_log(NULL, AV_LOG_INFO, "jni_get_env %x\n", env);
+
+        is->window = ANativeWindow_fromSurface(env, (jobject)is->surface);
+
+        av_log(NULL, AV_LOG_INFO, "ANativeWindow_fromSurface windowd: %x, width: %d, height: %d, format: %d, window_format: %d\n", is->window, vp->width, vp->height, vp->format, is->window_format);
+
+        ANativeWindow_setBuffersGeometry(is->window, vp->width, vp->height, is->window_format);
+    }
+
+    if (!vp->uploaded) {
+        if (upload_texture(is, vp->frame, &is->img_convert_ctx) < 0)
+            return;
+        vp->uploaded = 1;
+        vp->flip_v = vp->frame->linesize[0] < 0;
+    }
+
+#else
+    if (false && is->surface)
     {
         AVMediaCodecBuffer *buffer = (AVMediaCodecBuffer *) vp->frame->data[3];
         if (buffer)
             av_mediacodec_release_buffer(buffer, 1);
     }
 
-#else
     if (is->subtitle_st) {
         if (frame_queue_nb_remaining(&is->subpq) > 0) {
             sp = frame_queue_peek(&is->subpq);
@@ -2845,6 +3035,7 @@ VideoState *stream_open(const char *filename, AVInputFormat *iformat, void *surf
         goto fail;
     is->iformat = iformat;
     is->surface = surface;
+    is->window  = 0;
     is->ytop    = 0;
     is->xleft   = 0;
 
@@ -2875,6 +3066,9 @@ VideoState *stream_open(const char *filename, AVInputFormat *iformat, void *surf
     is->audio_callback_time     = 0;
 
     is->audios                  = 0;
+
+    //android
+    is->window_format           = WINDOW_FORMAT_RGBX_8888;
 
     memset(is->wanted_stream_spec, 0, sizeof(is->wanted_stream_spec));
 
@@ -2984,7 +3178,7 @@ void stream_close(VideoState *is)
     event_queue_destroy(&is->eventq);
 
     pthread_cond_destroy(&is->continue_read_thread);
-    //sws_freeContext(is->img_convert_ctx);
+    sws_freeContext(is->img_convert_ctx);
     //sws_freeContext(is->sub_convert_ctx);
     av_free(is->filename);
 

@@ -85,7 +85,6 @@ void RGBData::run_rgb_data()
         LOGV("create file failed %s", strerror(errno));
 #endif
 
-    m_rgb_exit = false;
     while (!m_rgb_exit) {
 
         LOGV("yuv queue count %d", m_yuv_queue.size());
