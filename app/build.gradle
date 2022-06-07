@@ -91,6 +91,13 @@ android {
         pickFirst 'lib/armeabi-v7a/libswscale.so'
         pickFirst 'lib/x86/libswscale.so'
         pickFirst 'lib/x86_64/libswscale.so'
+
+        pickFirst 'lib/arm64-v8a/libswresample.so'
+        pickFirst 'lib/armeabi-v7a/libswresample.so'
+        pickFirst 'lib/x86/libswresample.so'
+        pickFirst 'lib/x86_64/libswresample.so'
+
+
     }
     configurations.all() {
         resolutionStrategy.force "org.antlr:antlr4-runtime:4.5.3"

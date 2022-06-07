@@ -21,6 +21,7 @@ extern "C"
 #include "libavutil/channel_layout.h"
 #include "libavutil/imgutils.h"
 #include "libswscale/swscale.h"
+#include "libswresample/swresample.h"
 #include "opensl_io.h"
 };
 
@@ -348,11 +349,15 @@ typedef struct VideoState {
 
     AVDictionary *format_opts, *codec_opts, *resample_opts;
 
-    void *surface;
-    ANativeWindow *window;
 
     //android
+    void *surface;
+    ANativeWindow *window;
     int window_format;
+    uint8_t *pixels[4]; //sw
+    int pitch[4];
+    int image_size;
+
 } VideoState;
 
 
@@ -390,6 +395,71 @@ static int is_realtime(AVFormatContext *s)
         return 1;
     return 0;
 }
+
+
+static JavaVM *java_vm;
+static pthread_key_t current_env;
+static pthread_once_t once = PTHREAD_ONCE_INIT;
+static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
+
+static void jni_detach_env(void *data)
+{
+    if (java_vm) {
+        (*java_vm).DetachCurrentThread();
+    }
+}
+
+static void jni_create_pthread_key(void)
+{
+    pthread_key_create(&current_env, jni_detach_env);
+}
+
+JNIEnv *ff_jni_get_env(void *log_ctx)
+{
+    int ret = 0;
+    JNIEnv *env = NULL;
+
+    pthread_mutex_lock(&lock);
+    if (java_vm == NULL) {
+        java_vm = static_cast<JavaVM *>(av_jni_get_java_vm(log_ctx));
+    }
+
+    if (!java_vm) {
+        av_log(log_ctx, AV_LOG_ERROR, "No Java virtual machine has been registered\n");
+        goto done;
+    }
+
+    pthread_once(&once, jni_create_pthread_key);
+
+    if ((env = static_cast<JNIEnv *>(pthread_getspecific(current_env))) != NULL) {
+        goto done;
+    }
+
+    ret = (*java_vm).GetEnv((void **)&env, JNI_VERSION_1_6);
+    switch(ret) {
+        case JNI_EDETACHED:
+            if ((*java_vm).AttachCurrentThread(&env, NULL) != 0) {
+                av_log(log_ctx, AV_LOG_ERROR, "Failed to attach the JNI environment to the current thread\n");
+                env = NULL;
+            } else {
+                pthread_setspecific(current_env, env);
+            }
+            break;
+        case JNI_OK:
+            break;
+        case JNI_EVERSION:
+            av_log(log_ctx, AV_LOG_ERROR, "The specified JNI version is not supported\n");
+            break;
+        default:
+            av_log(log_ctx, AV_LOG_ERROR, "Failed to get the JNI environment attached to this thread\n");
+            break;
+    }
+
+    done:
+    pthread_mutex_unlock(&lock);
+    return env;
+}
+
 
 static int decode_interrupt_cb(void *ctx)
 {
@@ -1448,6 +1518,235 @@ static void *subtitle_thread(void *arg) {
 #define PERIOD_TIME 20 //ms
 #define FRAME_SIZE SAMPLERATE*PERIOD_TIME/1000
 
+/* copy samples for viewing in editor window */
+static void update_sample_display(VideoState *is, short *samples, int samples_size)
+{
+    int size, len;
+
+    size = samples_size / sizeof(short);
+    while (size > 0) {
+        len = SAMPLE_ARRAY_SIZE - is->sample_array_index;
+        if (len > size)
+            len = size;
+        memcpy(is->sample_array + is->sample_array_index, samples, len * sizeof(short));
+        samples += len;
+        is->sample_array_index += len;
+        if (is->sample_array_index >= SAMPLE_ARRAY_SIZE)
+            is->sample_array_index = 0;
+        size -= len;
+    }
+}
+
+/* return the wanted number of samples to get better sync if sync_type is video
+ * or external master clock */
+static int synchronize_audio(VideoState *is, int nb_samples)
+{
+    int wanted_nb_samples = nb_samples;
+
+    /* if not master, then we try to remove or add samples to correct the clock */
+    if (get_master_sync_type(is) != AV_SYNC_AUDIO_MASTER) {
+        double diff, avg_diff;
+        int min_nb_samples, max_nb_samples;
+
+        diff = get_clock(&is->audclk) - get_master_clock(is);
+
+        if (!isnan(diff) && fabs(diff) < AV_NOSYNC_THRESHOLD) {
+            is->audio_diff_cum = diff + is->audio_diff_avg_coef * is->audio_diff_cum;
+            if (is->audio_diff_avg_count < AUDIO_DIFF_AVG_NB) {
+                /* not enough measures to have a correct estimate */
+                is->audio_diff_avg_count++;
+            } else {
+                /* estimate the A-V difference */
+                avg_diff = is->audio_diff_cum * (1.0 - is->audio_diff_avg_coef);
+
+                if (fabs(avg_diff) >= is->audio_diff_threshold) {
+                    wanted_nb_samples = nb_samples + (int)(diff * is->audio_src.freq);
+                    min_nb_samples = ((nb_samples * (100 - SAMPLE_CORRECTION_PERCENT_MAX) / 100));
+                    max_nb_samples = ((nb_samples * (100 + SAMPLE_CORRECTION_PERCENT_MAX) / 100));
+                    wanted_nb_samples = av_clip(wanted_nb_samples, min_nb_samples, max_nb_samples);
+                }
+                av_log(NULL, AV_LOG_TRACE, "diff=%f adiff=%f sample_diff=%d apts=%0.3f %f\n",
+                       diff, avg_diff, wanted_nb_samples - nb_samples,
+                       is->audio_clock, is->audio_diff_threshold);
+            }
+        } else {
+            /* too big difference : may be initial PTS errors, so
+               reset A-V filter */
+            is->audio_diff_avg_count = 0;
+            is->audio_diff_cum       = 0;
+        }
+    }
+
+    return wanted_nb_samples;
+}
+
+/**
+ * Decode one audio frame and return its uncompressed size.
+ *
+ * The processed audio frame is decoded, converted if required, and
+ * stored in is->audio_buf, with size in bytes given by the return
+ * value.
+ */
+static int audio_decode_frame(VideoState *is)
+{
+    int data_size, resampled_data_size;
+    int64_t dec_channel_layout;
+    av_unused double audio_clock0;
+    int wanted_nb_samples;
+    Frame *af;
+
+    if (is->paused)
+        return -1;
+
+    do {
+#if defined(_WIN32)
+        while (frame_queue_nb_remaining(&is->sampq) == 0) {
+            if ((av_gettime_relative() - audio_callback_time) > 1000000LL * is->audio_hw_buf_size / is->audio_tgt.bytes_per_sec / 2)
+                return -1;
+            av_usleep (1000);
+        }
+#endif
+        if (!(af = frame_queue_peek_readable(&is->sampq)))
+            return -1;
+        frame_queue_next(&is->sampq);
+    } while (af->serial != is->audioq.serial);
+
+    data_size = av_samples_get_buffer_size(NULL, af->frame->channels,
+                                           af->frame->nb_samples,
+                                           static_cast<AVSampleFormat>(af->frame->format), 1);
+
+    dec_channel_layout =
+            (af->frame->channel_layout && af->frame->channels == av_get_channel_layout_nb_channels(af->frame->channel_layout)) ?
+            af->frame->channel_layout : av_get_default_channel_layout(af->frame->channels);
+    wanted_nb_samples = synchronize_audio(is, af->frame->nb_samples);
+
+    if (af->frame->format        != is->audio_src.fmt            ||
+        dec_channel_layout       != is->audio_src.channel_layout ||
+        af->frame->sample_rate   != is->audio_src.freq           ||
+        (wanted_nb_samples       != af->frame->nb_samples && !is->swr_ctx)) {
+        swr_free(&is->swr_ctx);
+        is->swr_ctx = swr_alloc_set_opts(NULL,
+                                         is->audio_tgt.channel_layout, is->audio_tgt.fmt, is->audio_tgt.freq,
+                                         dec_channel_layout,
+                                         static_cast<AVSampleFormat>(af->frame->format), af->frame->sample_rate,
+                                         0, NULL);
+        if (!is->swr_ctx || swr_init(is->swr_ctx) < 0) {
+            av_log(NULL, AV_LOG_ERROR,
+                   "Cannot create sample rate converter for conversion of %d Hz %s %d channels to %d Hz %s %d channels!\n",
+                   af->frame->sample_rate, av_get_sample_fmt_name(
+                            static_cast<AVSampleFormat>(af->frame->format)), af->frame->channels,
+                   is->audio_tgt.freq, av_get_sample_fmt_name(is->audio_tgt.fmt), is->audio_tgt.channels);
+            swr_free(&is->swr_ctx);
+            return -1;
+        }
+        is->audio_src.channel_layout = dec_channel_layout;
+        is->audio_src.channels       = af->frame->channels;
+        is->audio_src.freq = af->frame->sample_rate;
+        is->audio_src.fmt = static_cast<AVSampleFormat>(af->frame->format);
+    }
+
+    if (is->swr_ctx) {
+        const uint8_t **in = (const uint8_t **)af->frame->extended_data;
+        uint8_t **out = &is->audio_buf1;
+        int out_count = (int64_t)wanted_nb_samples * is->audio_tgt.freq / af->frame->sample_rate + 256;
+        int out_size  = av_samples_get_buffer_size(NULL, is->audio_tgt.channels, out_count, is->audio_tgt.fmt, 0);
+        int len2;
+        if (out_size < 0) {
+            av_log(NULL, AV_LOG_ERROR, "av_samples_get_buffer_size() failed\n");
+            return -1;
+        }
+        if (wanted_nb_samples != af->frame->nb_samples) {
+            if (swr_set_compensation(is->swr_ctx, (wanted_nb_samples - af->frame->nb_samples) * is->audio_tgt.freq / af->frame->sample_rate,
+                                     wanted_nb_samples * is->audio_tgt.freq / af->frame->sample_rate) < 0) {
+                av_log(NULL, AV_LOG_ERROR, "swr_set_compensation() failed\n");
+                return -1;
+            }
+        }
+        av_fast_malloc(&is->audio_buf1, &is->audio_buf1_size, out_size);
+        if (!is->audio_buf1)
+            return AVERROR(ENOMEM);
+        len2 = swr_convert(is->swr_ctx, out, out_count, in, af->frame->nb_samples);
+        if (len2 < 0) {
+            av_log(NULL, AV_LOG_ERROR, "swr_convert() failed\n");
+            return -1;
+        }
+        if (len2 == out_count) {
+            av_log(NULL, AV_LOG_WARNING, "audio buffer is probably too small\n");
+            if (swr_init(is->swr_ctx) < 0)
+                swr_free(&is->swr_ctx);
+        }
+        is->audio_buf = is->audio_buf1;
+        resampled_data_size = len2 * is->audio_tgt.channels * av_get_bytes_per_sample(is->audio_tgt.fmt);
+    } else {
+        is->audio_buf = af->frame->data[0];
+        resampled_data_size = data_size;
+    }
+
+    audio_clock0 = is->audio_clock;
+    /* update the audio clock with the pts */
+    if (!isnan(af->pts))
+        is->audio_clock = af->pts + (double) af->frame->nb_samples / af->frame->sample_rate;
+    else
+        is->audio_clock = NAN;
+    is->audio_clock_serial = af->serial;
+#ifdef DEBUG
+    {
+        static double last_clock;
+        printf("audio: delay=%0.3f clock=%0.3f clock0=%0.3f\n",
+               is->audio_clock - last_clock,
+               is->audio_clock, audio_clock0);
+        last_clock = is->audio_clock;
+    }
+#endif
+    return resampled_data_size;
+}
+
+
+/* prepare a new audio buffer */
+static void sdl_audio_callback(VideoState *opaque, uint8_t *stream, int len)
+{
+    VideoState *is = opaque;
+    int audio_size, len1;
+
+    is->audio_callback_time = av_gettime_relative();
+
+    while (len > 0) {
+        if (is->audio_buf_index >= is->audio_buf_size) {
+            audio_size = audio_decode_frame(is);
+            if (audio_size < 0) {
+                /* if error, just output silence */
+                is->audio_buf = NULL;
+                is->audio_buf_size = SDL_AUDIO_MIN_BUFFER_SIZE / is->audio_tgt.frame_size * is->audio_tgt.frame_size;
+            } else {
+                if (is->show_mode != VideoState::SHOW_MODE_VIDEO)
+                    update_sample_display(is, (int16_t *)is->audio_buf, audio_size);
+                is->audio_buf_size = audio_size;
+            }
+            is->audio_buf_index = 0;
+        }
+        len1 = is->audio_buf_size - is->audio_buf_index;
+        if (len1 > len)
+            len1 = len;
+        if (!is->muted && is->audio_buf && is->audio_volume == SDL_MIX_MAXVOLUME)
+            memcpy(stream, (uint8_t *)is->audio_buf + is->audio_buf_index, len1);
+        else {
+            memset(stream, 0, len1);
+            //设置音量
+            //if (!is->muted && is->audio_buf)
+            //    SDL_MixAudioFormat(stream, (uint8_t *)is->audio_buf + is->audio_buf_index, AUDIO_S16SYS, len1, is->audio_volume);
+        }
+        len -= len1;
+        stream += len1;
+        is->audio_buf_index += len1;
+    }
+    is->audio_write_buf_size = is->audio_buf_size - is->audio_buf_index;
+    /* Let's assume the audio driver that is used by SDL has two periods. */
+    if (!isnan(is->audio_clock)) {
+        set_clock_at(&is->audclk, is->audio_clock - (double)(2 * is->audio_hw_buf_size + is->audio_write_buf_size) / is->audio_tgt.bytes_per_sec, is->audio_clock_serial, is->audio_callback_time / 1000000.0);
+        sync_clock_to_slave(&is->extclk, &is->audclk);
+    }
+}
+
 static int audio_open(VideoState *is, int64_t wanted_channel_layout, int wanted_nb_channels, int wanted_sample_rate, struct AudioParams *audio_hw_params)
 {
     //freq 指定了每秒向音频设备发送的 sample 数。常用的值为：11025，22050，44100。值越高质量越好。
@@ -1483,9 +1782,6 @@ static int audio_open(VideoState *is, int64_t wanted_channel_layout, int wanted_
     //wanted_spec.callback = sdl_audio_callback;
     //wanted_spec.userdata = opaque;
 
-
-    //int sr, int inchannels, int outchannels, int bufferframes
-    //OPENSL_STREAM* stream = android_OpenAudioDevice(SAMPLERATE, CHANNELS, CHANNELS, FRAME_SIZE);
     OPENSL_STREAM* stream = android_OpenAudioDevice(freq, channels, channels, FRAME_SIZE);
     if (stream == NULL) {
         av_log(NULL, AV_LOG_ERROR, "failed to open audio device ! \n");
@@ -1610,7 +1906,7 @@ static int stream_component_open(VideoState *is, int stream_index)
     avctx = avcodec_alloc_context3(NULL);
     if (!avctx)
         return AVERROR(ENOMEM);
-
+#if 0
     if (ic->streams[stream_index]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO ) {
         if (!ic->streams[stream_index]->codecpar->extradata)
         {
@@ -1631,7 +1927,7 @@ static int stream_component_open(VideoState *is, int stream_index)
             }
         }
 
-        if (false && is->surface)
+        if (is->surface)
         {
             hw_type = av_hwdevice_find_type_by_name("mediacodec");
             if (hw_type == AV_HWDEVICE_TYPE_NONE) {
@@ -1660,6 +1956,7 @@ static int stream_component_open(VideoState *is, int stream_index)
             }
         }
     }
+#endif
 
     ret = avcodec_parameters_to_context(avctx, ic->streams[stream_index]->codecpar);
     if (ret < 0)
@@ -1780,6 +2077,19 @@ static int stream_component_open(VideoState *is, int stream_index)
             is->video_stream = stream_index;
             is->video_st = ic->streams[stream_index];
 
+            if (is->surface) {
+                JNIEnv *env = ff_jni_get_env(is->viddec.avctx);
+                if (!env) {
+                    av_log(NULL, AV_LOG_FATAL, "jni_get_env failed\n");
+                    ret = -1;
+                    goto out;
+                }
+
+                is->window = ANativeWindow_fromSurface(env, (jobject)is->surface);
+
+                av_log(NULL, AV_LOG_INFO, "ANativeWindow_fromSurface window: %x, surface: %x\n", is->window, is->surface);
+            }
+
             decoder_init(&is->viddec, avctx, &is->videoq, is->continue_read_thread);
             if ((ret = decoder_start(&is->viddec, video_thread, "video_decoder", is)) < 0)
                 goto out;
@@ -1840,6 +2150,8 @@ static void stream_component_close(VideoState *is, int stream_index)
         case AVMEDIA_TYPE_VIDEO:
             decoder_abort(&is->viddec, &is->pictq);
             decoder_destroy(&is->viddec);
+            if (is->window)
+                ANativeWindow_release(is->window);
             break;
         case AVMEDIA_TYPE_SUBTITLE:
             decoder_abort(&is->subdec, &is->subpq);
@@ -2336,69 +2648,6 @@ static void update_video_pts(VideoState *is, double pts, int64_t pos, int serial
     sync_clock_to_slave(&is->extclk, &is->vidclk);
 }
 
-static JavaVM *java_vm;
-static pthread_key_t current_env;
-static pthread_once_t once = PTHREAD_ONCE_INIT;
-static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
-
-static void jni_detach_env(void *data)
-{
-    if (java_vm) {
-        (*java_vm).DetachCurrentThread();
-    }
-}
-
-static void jni_create_pthread_key(void)
-{
-    pthread_key_create(&current_env, jni_detach_env);
-}
-
-JNIEnv *ff_jni_get_env(void *log_ctx)
-{
-    int ret = 0;
-    JNIEnv *env = NULL;
-
-    pthread_mutex_lock(&lock);
-    if (java_vm == NULL) {
-        java_vm = static_cast<JavaVM *>(av_jni_get_java_vm(log_ctx));
-    }
-
-    if (!java_vm) {
-        av_log(log_ctx, AV_LOG_ERROR, "No Java virtual machine has been registered\n");
-        goto done;
-    }
-
-    pthread_once(&once, jni_create_pthread_key);
-
-    if ((env = static_cast<JNIEnv *>(pthread_getspecific(current_env))) != NULL) {
-        goto done;
-    }
-
-    ret = (*java_vm).GetEnv((void **)&env, JNI_VERSION_1_6);
-    switch(ret) {
-        case JNI_EDETACHED:
-            if ((*java_vm).AttachCurrentThread(&env, NULL) != 0) {
-                av_log(log_ctx, AV_LOG_ERROR, "Failed to attach the JNI environment to the current thread\n");
-                env = NULL;
-            } else {
-                pthread_setspecific(current_env, env);
-            }
-            break;
-        case JNI_OK:
-            break;
-        case JNI_EVERSION:
-            av_log(log_ctx, AV_LOG_ERROR, "The specified JNI version is not supported\n");
-            break;
-        default:
-            av_log(log_ctx, AV_LOG_ERROR, "Failed to get the JNI environment attached to this thread\n");
-            break;
-    }
-
-    done:
-    pthread_mutex_unlock(&lock);
-    return env;
-}
-
 static void get_android_pix_fmt(int format, enum AVPixelFormat *pix_fmt)
 {
     int i;
@@ -2410,66 +2659,76 @@ static void get_android_pix_fmt(int format, enum AVPixelFormat *pix_fmt)
     }
 }
 
-/*
-static int realloc_texture(ANativeWindow *window, int new_format, int new_width, int new_height, int init_texture)
+
+static int realloc_texture(VideoState *is, int new_format, int new_width, int new_height, enum AVPixelFormat pix_fmt)
 {
     int format;
-    int access, w, h;
+    int w, h;
+    ANativeWindow *window = is->window;
 
-    int32_t old_width = ANativeWindow_getWidth(m_window);
-    if (old_width != width)
-        break;
+    if (window && ((w = ANativeWindow_getWidth(window)) != new_width ||
+            (h = ANativeWindow_getHeight(window)) != new_height ||
+            (format = ANativeWindow_getFormat(window)) != new_format) ) {
 
-    int32_t old_height = ANativeWindow_getHeight(m_window);
-    if (old_height != height)
-        break;
+        av_log(NULL, AV_LOG_VERBOSE, "Old %dx%d window with %d.\n", w, h, format);
 
-    int32_t old_format = ANativeWindow_getFormat(m_window);
-    if (old_format != format)
-        break;
-    if (window && SDL_QueryTexture(*texture, &format, &access, &w, &h) < 0 || new_width != w || new_height != h || new_format != format) {
-        void *pixels;
-        int pitch;
-        if (*texture)
-            SDL_DestroyTexture(*texture);
-        if (!(*texture = SDL_CreateTexture(renderer, new_format, SDL_TEXTUREACCESS_STREAMING, new_width, new_height)))
-            return -1;
-        if (SDL_SetTextureBlendMode(*texture, blendmode) < 0)
-            return -1;
-        if (init_texture) {
-            if (SDL_LockTexture(*texture, NULL, &pixels, &pitch) < 0)
-                return -1;
-            memset(pixels, 0, pitch * new_height);
-            SDL_UnlockTexture(*texture);
-        }
-        av_log(NULL, AV_LOG_VERBOSE, "Created %dx%d texture with %s.\n", new_width, new_height, SDL_GetPixelFormatName(new_format));
+        if (w != new_width || h != new_height)
+            is->image_size = 0;
+
+        ANativeWindow_setBuffersGeometry(window, new_width, new_height, new_format);
+
+        av_log(NULL, AV_LOG_VERBOSE, "Created %dx%d window with %d.\n", new_width, new_height, ANativeWindow_getFormat(window));
     }
+
+    if (is->image_size <= 0) {
+        av_freep(&is->pixels[0]);
+
+        /* buffer is going to be written to rawvideo file, no alignment */
+        if ((is->image_size = av_image_alloc(is->pixels, is->pitch,
+                                         new_width, new_height, pix_fmt, 1)) < 0) {
+            av_log(NULL, AV_LOG_FATAL, "Could not allocate destination image %dx%d\n", new_width, new_height);
+            return -1;
+        }
+
+        av_log(NULL, AV_LOG_VERBOSE, "Alloc image %dx%d out size %d.\n", new_width, new_height, is->image_size);
+    }
+
     return 0;
-}*/
+}
 
+#include <stdio.h>
 static int upload_texture(VideoState *is, AVFrame *frame, struct SwsContext **img_convert_ctx) {
-
-    int ret;
-    uint8_t *pixels[4];
-    int pitch[4];
 
     enum AVPixelFormat pix_fmt;
     get_android_pix_fmt(is->window_format, &pix_fmt);
+
+    if (realloc_texture(is, is->window_format, frame->width, frame->height, pix_fmt) < 0)
+        return -1;
 
     *img_convert_ctx = sws_getCachedContext(*img_convert_ctx,
                                             frame->width, frame->height,
                                             static_cast<AVPixelFormat>(frame->format), frame->width, frame->height,
                                             pix_fmt, SWS_BICUBIC, NULL, NULL, NULL);
 
-    /* buffer is going to be written to rawvideo file, no alignment */
-    if ((ret = av_image_alloc(pixels, pitch,
-                              frame->width, frame->height, pix_fmt, 1)) < 0) {
-        av_log(NULL, AV_LOG_FATAL, "Could not allocate destination image\n");
-        return -1;
-    }
-
     sws_scale(is->img_convert_ctx, (const uint8_t * const *)frame->data, frame->linesize,
-              0, frame->height, pixels, pitch);
+              0, frame->height, is->pixels, is->pitch);
+
+    av_log(NULL, AV_LOG_DEBUG, "scale %d*%d %x*%d %x*%d %x*%d\n"
+           , frame->width, frame->height
+           , is->pixels[0], is->pitch[0]
+           , is->pixels[1], is->pitch[1]
+           , is->pixels[2], is->pitch[2]);
+
+#if 0
+    FILE *fp = fopen("/data/data/com.kotlin.media/files/a.png", "wb");
+    if (fp)
+    {
+        fwrite(is->pixels[0], is->image_size, 1, fp);
+        fclose(fp);
+    }
+    else
+        av_log(NULL, AV_LOG_FATAL, "open file failed %s\n", "/data/data/com.kotlin.media/files/a.png");
+#endif
 
     ANativeWindow_Buffer window_buffer;
     if (ANativeWindow_lock(is->window, &window_buffer, 0))
@@ -2478,12 +2737,11 @@ static int upload_texture(VideoState *is, AVFrame *frame, struct SwsContext **im
         goto end;
     }
 
-    memcpy(window_buffer.bits, pixels[0], ret);
+    memcpy(window_buffer.bits, is->pixels[0], is->image_size);
 
     ANativeWindow_unlockAndPost(is->window);
 
     end:
-    av_freep(&pixels[0]);
     return 0;
 }
 
@@ -2494,23 +2752,6 @@ static void video_image_display(VideoState *is)
 
     vp = frame_queue_peek_last(&is->pictq);
 #if 1
-    if (!is->window && is->surface) {
-        //AVCodecContext *avctx
-
-        JNIEnv *env = ff_jni_get_env(is->viddec.avctx);
-        if (!env) {
-            av_log(NULL, AV_LOG_FATAL, "jni_get_env failed\n");
-            return;
-        }
-
-        av_log(NULL, AV_LOG_INFO, "jni_get_env %x\n", env);
-
-        is->window = ANativeWindow_fromSurface(env, (jobject)is->surface);
-
-        av_log(NULL, AV_LOG_INFO, "ANativeWindow_fromSurface windowd: %x, width: %d, height: %d, format: %d, window_format: %d\n", is->window, vp->width, vp->height, vp->format, is->window_format);
-
-        ANativeWindow_setBuffersGeometry(is->window, vp->width, vp->height, is->window_format);
-    }
 
     if (!vp->uploaded) {
         if (upload_texture(is, vp->frame, &is->img_convert_ctx) < 0)
@@ -2813,7 +3054,9 @@ static void video_refresh(VideoState *is, double *remaining_time)
             last_duration = vp_duration(is, lastvp, vp);
             delay = compute_target_delay(last_duration, is);
 
+
             time= av_gettime_relative()/1000000.0;
+            //av_log(NULL, AV_LOG_DEBUG, "wait tarrget delay %d %ld %d\n", delay, time, is->frame_timer);
             if (time < is->frame_timer + delay) {
                 *remaining_time = FFMIN(is->frame_timer + delay - time, *remaining_time);
                 goto display;
@@ -2930,6 +3173,7 @@ static int refresh_loop_wait_event(VideoState *is, MyEvent *event) {
     int ret;
     double remaining_time = 0.0;
     while ((ret = event_queue_get(is->looper.queue, event, 0)) == 0) {
+        //av_log(NULL, AV_LOG_DEBUG, "wait video refresh %d\n", remaining_time);
         if (remaining_time > 0.0)
             av_usleep((int64_t)(remaining_time * 1000000.0));
         remaining_time = REFRESH_RATE;
@@ -3068,7 +3312,9 @@ VideoState *stream_open(const char *filename, AVInputFormat *iformat, void *surf
     is->audios                  = 0;
 
     //android
-    is->window_format           = WINDOW_FORMAT_RGBX_8888;
+    is->window_format           = WINDOW_FORMAT_RGBA_8888;
+
+    is->image_size              = 0;
 
     memset(is->wanted_stream_spec, 0, sizeof(is->wanted_stream_spec));
 
@@ -3181,6 +3427,7 @@ void stream_close(VideoState *is)
     sws_freeContext(is->img_convert_ctx);
     //sws_freeContext(is->sub_convert_ctx);
     av_free(is->filename);
+    av_freep(&is->pixels[0]);
 
 #if 0
     if (is->vis_texture)

@@ -86,6 +86,16 @@ set_target_properties(libswscale
         PROPERTIES IMPORTED_LOCATION
         ${CMAKE_SOURCE_DIR}/libffmpeg/libs/${ANDROID_ABI}/libswscale.so)
 
+
+add_library(libswresample
+        SHARED
+        IMPORTED)
+set_target_properties(libswresample
+        PROPERTIES IMPORTED_LOCATION
+        ${CMAKE_SOURCE_DIR}/libffmpeg/libs/${ANDROID_ABI}/libswresample.so)
+
+
+
 #add_library(libavdevice
 #        SHARED
 #        IMPORTED)
@@ -119,6 +129,7 @@ target_link_libraries( # Specifies the target library.
                         libavcodec
                         libavformat
                         libswscale
+                        libswresample
                         OpenSLES
                         android
                        # Links the target library to the log library

@@ -27,6 +27,7 @@
 */
 
 #include "opensl_io.h"
+#include <string.h>
 
 #define CONV16BIT 32768
 #define CONVMYFLT (1./32768.)
