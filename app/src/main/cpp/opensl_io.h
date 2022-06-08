@@ -43,6 +43,12 @@ typedef struct threadLock_ {
 extern "C" {
 #endif
 
+typedef struct opensl_stream OPENSL_STREAM;
+typedef void (SLAPIENTRY *slAndroidAudioCallback)(
+        OPENSL_STREAM *stream,
+        void *pContext
+);
+
 typedef struct opensl_stream {
   
     // engine interfaces
@@ -51,6 +57,7 @@ typedef struct opensl_stream {
 
     // output mix interfaces
     SLObjectItf outputMixObject;
+    SLEnvironmentalReverbItf outputMixEnvironmentalReverb;
 
     // buffer queue player interfaces
     SLObjectItf bqPlayerObject;
@@ -88,7 +95,14 @@ typedef struct opensl_stream {
     int outchannels;
     int sr;
 
+    // callback
+    slAndroidAudioCallback callback;
+    void *pContext;
+    int init_callback;
+
 } OPENSL_STREAM;
+
+
 
 /*
   Open the audio device with a given sampling rate (sr), input and output channels and IO buffer size
@@ -100,6 +114,14 @@ OPENSL_STREAM* android_OpenAudioDevice(int sr, int inchannels, int outchannels, 
   Close the audio device
 */
 void android_CloseAudioDevice(OPENSL_STREAM *p);
+
+void android_RegisterCallback(OPENSL_STREAM *p, slAndroidAudioCallback callback, void *context);
+
+void android_ActivateCallback(OPENSL_STREAM *p);
+
+void android_Play(OPENSL_STREAM *p);
+void android_pause(OPENSL_STREAM *p);
+void android_stop(OPENSL_STREAM *p);
 
 /*
   Read a buffer from the OpenSL stream *p, of size samples. Returns the number of samples read.
