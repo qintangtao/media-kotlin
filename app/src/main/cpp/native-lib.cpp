@@ -725,6 +725,7 @@ Java_com_kotlin_media_DeviceSurface_ffmpegSetVolume(
     LOGV("Java_com_kotlin_media_DeviceSurface_ffmpegSetVolume: %s, volume: %d\n", utf8, volume);
 
     //send_event(is, static_cast<ffEvent>(code));
+    set_volume(is, volume);
 }
 
 void print_ffmpeg_info()

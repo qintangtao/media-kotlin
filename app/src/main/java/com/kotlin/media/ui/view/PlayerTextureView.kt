@@ -25,7 +25,9 @@ class PlayerTextureView  : TextureView, TextureView.SurfaceTextureListener {
         FF_EVENT_TOOGLE_MUTE(1),       //静音
         FF_EVENT_INC_VOLUME(2),        //静音加
         FF_EVENT_DEC_VOLUME(3),        //静音减
-        FF_EVENT_NEXT_FRAME(4);         //下一帧
+        FF_EVENT_NEXT_FRAME(4),         //下一帧
+        FF_EVENT_FAST_BACK(5),         //后退
+        FF_EVENT_FAST_FORWARD(6);      //快进
     };
 
     var mHandler: Long = 0
@@ -68,6 +70,20 @@ class PlayerTextureView  : TextureView, TextureView.SurfaceTextureListener {
         Log.d("native-lib", "toogleMute: $mHandler")
         if (mHandler.compareTo(0) != 0) {
             DeviceSurface.get().ffmpegSendEvent(mHandler, ffEvent.FF_EVENT_TOOGLE_MUTE.code)
+        }
+    }
+
+    fun fastBack() {
+        Log.d("native-lib", "fastBack: $mHandler")
+        if (mHandler.compareTo(0) != 0) {
+            DeviceSurface.get().ffmpegSendEvent(mHandler, ffEvent.FF_EVENT_FAST_BACK.code)
+        }
+    }
+
+    fun fastForward() {
+        Log.d("native-lib", "fastFoward: $mHandler")
+        if (mHandler.compareTo(0) != 0) {
+            DeviceSurface.get().ffmpegSendEvent(mHandler, ffEvent.FF_EVENT_FAST_FORWARD.code)
         }
     }
 

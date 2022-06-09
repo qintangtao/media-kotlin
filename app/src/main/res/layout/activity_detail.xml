@@ -104,5 +104,37 @@
         app:layout_constraintRight_toRightOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/clPlayer" />
 
+    <SeekBar
+        android:id="@+id/sbSeek"
+        android:layout_height="wrap_content"
+        android:layout_width="match_parent"
+        android:text="进度"
+        android:layout_marginTop="9dp"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/volume_uri" />
+
+    <Button
+        android:id="@+id/btnBack"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="后退"
+        android:layout_marginTop="9dp"
+        android:layout_marginStart="9dp"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/sbSeek"
+        />
+
+    <Button
+        android:id="@+id/btnForward"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="快进"
+        android:layout_marginTop="9dp"
+        android:layout_marginEnd="9dp"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/sbSeek"
+        />
+
 </androidx.constraintlayout.widget.ConstraintLayout>
 </layout>

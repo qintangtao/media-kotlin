@@ -39,5 +39,6 @@ const char *stream_filename(VideoState *is);
 
 void *stream_surface(VideoState *is);
 
+void set_volume(VideoState *is, int volume);
 
 #endif //NDKDEMO_FFPLAY_H

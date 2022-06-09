@@ -1771,7 +1771,7 @@ void sl_audio_callback(
 
     android_AudioEnqueueOut(p, outBuffer,bufsamps);
 
-#if 0
+#if 1
     volume = android_GetVolume(is->audios);
     max_volume = android_GetMaxVolume(is->audios);
     double volume_level = is->audio_volume ? (20 * log(is->audio_volume / (double)SDL_MIX_MAXVOLUME) / log(10)) : -1000.0;
@@ -3551,4 +3551,17 @@ const char *stream_filename(VideoState *is)
 void *stream_surface(VideoState *is)
 {
     return is->surface;
+}
+
+void set_volume(VideoState *is, int volume)
+{
+    SLmillibel max_volume;
+
+    av_log(NULL, AV_LOG_DEBUG, "set_volume %d\n", volume);
+    android_SetVolume(is->audios, volume);
+
+    volume = android_GetVolume(is->audios);
+    max_volume = android_GetMaxVolume(is->audios);
+
+    av_log(NULL, AV_LOG_DEBUG, "set_volume %d %d\n", volume, max_volume);
 }
