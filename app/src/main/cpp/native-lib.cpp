@@ -711,6 +711,21 @@ Java_com_kotlin_media_DeviceSurface_ffmpegSendEvent(
     send_event(is, static_cast<ffEvent>(code));
 }
 
+extern "C" JNIEXPORT void JNICALL
+Java_com_kotlin_media_DeviceSurface_ffmpegSetVolume(
+        JNIEnv* env,
+        jobject /* this */,
+        jlong handle,
+        jlong volume) {
+
+    VideoState *is = (VideoState *)handle;
+
+    const char *utf8 = stream_filename(is);
+
+    LOGV("Java_com_kotlin_media_DeviceSurface_ffmpegSetVolume: %s, volume: %d\n", utf8, volume);
+
+    //send_event(is, static_cast<ffEvent>(code));
+}
 
 void print_ffmpeg_info()
 {

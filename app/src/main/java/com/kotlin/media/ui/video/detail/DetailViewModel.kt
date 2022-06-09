@@ -36,6 +36,15 @@ class DetailViewModel : BaseViewModel() {
                         ptvPlayer.tooglePause()
                     }
                 }
+                R.id.ivMute -> {
+                    var ptvPlayer = (view.parent as View).findViewById<PlayerTextureView>(R.id.ptv_player)
+
+                    Log.d("native-lib", "DetailViewModel.ivPaused: " + ptvPlayer)
+
+                    ptvPlayer?.let {
+                        ptvPlayer.toogleMute()
+                    }
+                }
             }
         }
     }

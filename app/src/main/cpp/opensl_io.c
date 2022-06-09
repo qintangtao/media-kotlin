@@ -134,6 +134,7 @@ static SLresult openSLPlayOpen(OPENSL_STREAM *p)
         result = (*p->outputMixObject)->Realize(p->outputMixObject, SL_BOOLEAN_FALSE);
         if(result != SL_RESULT_SUCCESS) goto end_openaudio;
 
+#if 0
         result = (*p->outputMixObject)->GetInterface(p->outputMixObject, SL_IID_ENVIRONMENTALREVERB,
                                                   &p->outputMixEnvironmentalReverb);
         if (SL_RESULT_SUCCESS == result) {
@@ -143,6 +144,7 @@ static SLresult openSLPlayOpen(OPENSL_STREAM *p)
                     p->outputMixEnvironmentalReverb, &reverbSettings);
             if(result != SL_RESULT_SUCCESS) goto end_openaudio;
         }
+#endif
 
         int speakers;
         if(channels > 1)
@@ -175,10 +177,10 @@ static SLresult openSLPlayOpen(OPENSL_STREAM *p)
 
         // create audio playerplayer
 #if 1
-        const SLInterfaceID ids1[] = {SL_IID_ANDROIDSIMPLEBUFFERQUEUE};
-        const SLboolean req1[] = {SL_BOOLEAN_TRUE};
+        const SLInterfaceID ids1[] = {SL_IID_ANDROIDSIMPLEBUFFERQUEUE, SL_IID_VOLUME};
+        const SLboolean req1[] = {SL_BOOLEAN_TRUE, SL_BOOLEAN_TRUE};
         result = (*p->engineEngine)->CreateAudioPlayer(p->engineEngine, &(p->bqPlayerObject), &audioSrc, &audioSnk,
-                               1, ids1, req1);
+                               2, ids1, req1);
 #else
         const SLInterfaceID ids1[3] = {SL_IID_SEEK, SL_IID_MUTESOLO, SL_IID_VOLUME};
         const SLboolean req1[3] = {SL_BOOLEAN_TRUE, SL_BOOLEAN_TRUE, SL_BOOLEAN_TRUE};
@@ -190,6 +192,10 @@ static SLresult openSLPlayOpen(OPENSL_STREAM *p)
 
         // realize the player
         result = (*p->bqPlayerObject)->Realize(p->bqPlayerObject, SL_BOOLEAN_FALSE);
+        if(result != SL_RESULT_SUCCESS) goto end_openaudio;
+
+        // 获取音量控制接口 ( get the volume interface ) [ 如果需要调节音量可以获取该接口 ]
+        result = (*p->bqPlayerObject)->GetInterface(p->bqPlayerObject, SL_IID_VOLUME, &(p->bqPlayerVolume));
         if(result != SL_RESULT_SUCCESS) goto end_openaudio;
 
         // get the play interface
@@ -473,21 +479,69 @@ void android_ActivateCallback(OPENSL_STREAM *p)
     bqPlayerCallback(p->bqPlayerBufferQueue, p);
 }
 
-void android_Play(OPENSL_STREAM *p)
+void android_play(OPENSL_STREAM *p)
 {
     SLresult result;
     result = (*p->bqPlayerPlay)->SetPlayState(p->bqPlayerPlay, SL_PLAYSTATE_PLAYING);
+    //assert(SL_RESULT_SUCCESS == result);
+    (void)result;
 }
 void android_pause(OPENSL_STREAM *p)
 {
     SLresult result;
     result = (*p->bqPlayerPlay)->SetPlayState(p->bqPlayerPlay, SL_PLAYSTATE_PAUSED);
+    //assert(SL_RESULT_SUCCESS == result);
+    (void)result;
 }
 
 void android_stop(OPENSL_STREAM *p)
 {
     SLresult result;
     result = (*p->bqPlayerPlay)->SetPlayState(p->bqPlayerPlay, SL_PLAYSTATE_STOPPED);
+    //assert(SL_RESULT_SUCCESS == result);
+    (void)result;
+}
+
+void android_mute(OPENSL_STREAM *p, SLboolean mute)
+{
+    SLresult result;
+    result = (*p->bqPlayerVolume)->SetMute(p->bqPlayerVolume, mute);
+    //assert(SL_RESULT_SUCCESS == result);
+    (void)result;
+}
+
+void android_SetVolume(OPENSL_STREAM *p, SLmillibel volume)
+{
+    SLresult result;
+    result = (*p->bqPlayerVolume)->SetVolumeLevel(p->bqPlayerVolume, volume);
+    //assert(SL_RESULT_SUCCESS == result);
+    (void)result;
+}
+
+SLmillibel android_GetVolume(OPENSL_STREAM *p)
+{
+    SLresult result;
+    SLmillibel pLevel = 0;
+    result = (*p->bqPlayerVolume)->GetVolumeLevel(p->bqPlayerVolume, &pLevel);
+    if (SL_RESULT_SUCCESS == result)
+        return pLevel;
+    return 0;
+}
+
+SLmillibel android_GetMaxVolume(OPENSL_STREAM *p)
+{
+    SLresult result;
+    SLmillibel pLevel = 0;
+    result = (*p->bqPlayerVolume)->GetMaxVolumeLevel(p->bqPlayerVolume, &pLevel);
+    if (SL_RESULT_SUCCESS == result)
+        return pLevel;
+    return 0;
+}
+
+int android_AudioEnqueueOut(OPENSL_STREAM *p, const void *buffer,int size)
+{
+    (*p->bqPlayerBufferQueue)->Enqueue(p->bqPlayerBufferQueue,
+                                       buffer, size);
 }
 
 // returns timestamp of the processed stream

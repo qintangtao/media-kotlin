@@ -14,6 +14,7 @@
     tools:context=".ui.video.detail.DetailActivity">
 
     <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/clPlayer"
         android:layout_width="match_parent"
         android:layout_height="230dp"
         android:padding="9dp"
@@ -79,7 +80,29 @@
             app:layout_constraintLeft_toLeftOf="parent"
             app:layout_constraintBottom_toBottomOf="parent" />
 
+        <ImageView
+            android:id="@+id/ivMute"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_marginEnd="9dp"
+            android:layout_marginBottom="6dp"
+            android:background="@drawable/selector_video_paused"
+            android:clickable="true"
+            android:onClick="@{(view)->viewModel.listenner.onClick(view, viewModel.itemBean)}"
+            app:layout_constraintRight_toRightOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent" />
+
     </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <SeekBar
+        android:id="@+id/volume_uri"
+        android:layout_height="wrap_content"
+        android:layout_width="match_parent"
+        android:text="音量"
+        android:layout_marginTop="9dp"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/clPlayer" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
 </layout>

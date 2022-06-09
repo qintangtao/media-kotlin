@@ -38,36 +38,43 @@ class PlayerTextureView  : TextureView, TextureView.SurfaceTextureListener {
     }
 
     fun start(filename: String) : Boolean{
-        Log.d("native-lib", "start: " + filename)
+        Log.d("native-lib", "start: $filename")
         mSurface?.let {
-            Log.d("native-lib", "start2: " + filename)
+            Log.d("native-lib", "start2: $filename")
             mHandler = DeviceSurface.get().ffmpegOpen(filename, mSurface!!)
-            Log.d("native-lib", "start3: " + filename + " mHandler: " + mHandler)
+            Log.d("native-lib", "start3: $filename mHandler: $mHandler")
             return true
         }
         return false
     }
 
     fun stop() {
-        Log.d("native-lib", "stop: " + mHandler)
+        Log.d("native-lib", "stop: $mHandler")
         if (mHandler.compareTo(0) != 0) {
-            Log.d("native-lib", "stop2: " + mHandler)
+            Log.d("native-lib", "stop2: $mHandler")
             DeviceSurface.get().ffmpegClose(mHandler)
             mHandler = 0
         }
     }
 
     fun tooglePause() {
-        Log.d("native-lib", "tooglePause: " + mHandler)
+        Log.d("native-lib", "tooglePause: $mHandler")
         if (mHandler.compareTo(0) != 0) {
             DeviceSurface.get().ffmpegSendEvent(mHandler, ffEvent.FF_EVENT_TOOGLE_PAUSE.code)
         }
     }
 
     fun toogleMute() {
-        Log.d("native-lib", "toogleMute: " + mHandler)
+        Log.d("native-lib", "toogleMute: $mHandler")
         if (mHandler.compareTo(0) != 0) {
             DeviceSurface.get().ffmpegSendEvent(mHandler, ffEvent.FF_EVENT_TOOGLE_MUTE.code)
+        }
+    }
+
+    fun setVolume(volume: Int) {
+        Log.d("native-lib", "setVolume: $mHandler $volume")
+        if (mHandler.compareTo(0) != 0) {
+            DeviceSurface.get().ffmpegSetVolume(mHandler, volume.toLong())
         }
     }
 

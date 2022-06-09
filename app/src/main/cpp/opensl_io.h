@@ -62,6 +62,7 @@ typedef struct opensl_stream {
     // buffer queue player interfaces
     SLObjectItf bqPlayerObject;
     SLPlayItf bqPlayerPlay;
+    SLVolumeItf bqPlayerVolume;
     SLAndroidSimpleBufferQueueItf bqPlayerBufferQueue;
     SLEffectSendItf bqPlayerEffectSend;
 
@@ -119,9 +120,20 @@ void android_RegisterCallback(OPENSL_STREAM *p, slAndroidAudioCallback callback,
 
 void android_ActivateCallback(OPENSL_STREAM *p);
 
-void android_Play(OPENSL_STREAM *p);
+void android_play(OPENSL_STREAM *p);
 void android_pause(OPENSL_STREAM *p);
 void android_stop(OPENSL_STREAM *p);
+
+void android_mute(OPENSL_STREAM *p, SLboolean mute);
+
+void android_SetVolume(OPENSL_STREAM *p, SLmillibel volume);
+
+SLmillibel android_GetVolume(OPENSL_STREAM *p);
+
+SLmillibel android_GetMaxVolume(OPENSL_STREAM *p);
+
+int android_AudioEnqueueOut(OPENSL_STREAM *p, const void *buffer,int size);
+
 
 /*
   Read a buffer from the OpenSL stream *p, of size samples. Returns the number of samples read.

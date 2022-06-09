@@ -29,6 +29,9 @@ class DeviceSurface {
 
     external fun ffmpegSendEvent(handle: Long, code: Long)
 
+    external fun ffmpegSetVolume(handle: Long, volume: Long)
+
+
 
     companion object {
         // Used to load the 'native-lib' library on application startup.

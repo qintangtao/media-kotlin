@@ -1735,11 +1735,11 @@ static void sdl_audio_callback(VideoState *opaque, uint8_t *stream, int len)
         if (len1 > len)
             len1 = len;
 
-        if (!is->muted && is->audio_buf) // && is->audio_volume == SDL_MIX_MAXVOLUME
+        if (!is->muted && is->audio_buf) // && is->audio_volume == SDL_MIX_MAXVOLUME  //SDL 最大音量拷贝数据
             memcpy(stream, (uint8_t *)is->audio_buf + is->audio_buf_index, len1);
         else {
-            //memset(stream, 0, len1);
-            //if (!is->muted && is->audio_buf)
+            memset(stream, 0, len1); // 静音
+            //if (!is->muted && is->audio_buf)   //没有静音， 通过SDL_MixAudioFormat复制数据并同时设置音量
             //    SDL_MixAudioFormat(stream, (uint8_t *)is->audio_buf + is->audio_buf_index, AUDIO_S16SYS, len1, is->audio_volume);
         }
         len -= len1;
@@ -1759,17 +1759,27 @@ void sl_audio_callback(
         void *pContext
 )
 {
+    SLmillibel volume, max_volume;
     VideoState *is = (VideoState *)pContext;
 
     av_log(NULL, AV_LOG_DEBUG, "sl_audio_callback %d\n", p->outBufSamples);
 
     short *outBuffer = p->outputBuffer[p->currentOutputBuffer];
-    int bufsamps = p->outBufSamples;
+    int bufsamps = p->outBufSamples*sizeof(short);
 
     sdl_audio_callback(is, reinterpret_cast<uint8_t *>(outBuffer), bufsamps);
 
-    (*p->bqPlayerBufferQueue)->Enqueue(p->bqPlayerBufferQueue,
-                                       outBuffer,bufsamps*sizeof(short));
+    android_AudioEnqueueOut(p, outBuffer,bufsamps);
+
+#if 0
+    volume = android_GetVolume(is->audios);
+    max_volume = android_GetMaxVolume(is->audios);
+    double volume_level = is->audio_volume ? (20 * log(is->audio_volume / (double)SDL_MIX_MAXVOLUME) / log(10)) : -1000.0;
+    av_log(NULL, AV_LOG_DEBUG, "sl_audio_callback %d:%d:%d:%d\n", volume, max_volume, is->audio_volume, volume_level);
+#endif
+    //if (volume != is->audio_volume)
+    //    android_SetVolume(is->audios, is->audio_volume);
+
 }
 
 static int audio_open(VideoState *is, int64_t wanted_channel_layout, int wanted_nb_channels, int wanted_sample_rate, struct AudioParams *audio_hw_params)
@@ -1784,7 +1794,6 @@ static int audio_open(VideoState *is, int64_t wanted_channel_layout, int wanted_
     static const int next_nb_channels[] = {0, 0, 1, 6, 2, 6, 4, 6};
     static const int next_sample_rates[] = {0, 44100, 48000, 96000, 192000};
     int next_sample_rate_idx = FF_ARRAY_ELEMS(next_sample_rates) - 1;
-
 
     av_log(NULL, AV_LOG_DEBUG, "audio is wanted_channel_layout:%d, wanted_nb_channels:%d, wanted_sample_rate:%d, \n",
            wanted_channel_layout, wanted_nb_channels, wanted_sample_rate);
@@ -1845,7 +1854,7 @@ static int audio_open(VideoState *is, int64_t wanted_channel_layout, int wanted_
 
     is->audios = stream;
     //return spec.size;
-    return stream->outBufSamples;
+    return stream->outBufSamples*sizeof(short);
 
 #else
 
@@ -2125,7 +2134,7 @@ static int stream_component_open(VideoState *is, int stream_index)
             if ((ret = decoder_start(&is->auddec, audio_thread, "audio_decoder", is)) < 0)
                 goto out;
             //SDL_PauseAudioDevice(audio_dev, 0);
-            android_Play(is->audios);
+            android_play(is->audios);
             av_log(NULL, AV_LOG_DEBUG, "audio play successed\n");
 #endif
             break;
@@ -2186,15 +2195,16 @@ static void stream_component_close(VideoState *is, int stream_index)
 
     switch (codecpar->codec_type) {
         case AVMEDIA_TYPE_AUDIO:
-#if 0
             decoder_abort(&is->auddec, &is->sampq);
-            SDL_CloseAudioDevice(audio_dev);
+            //SDL_CloseAudioDevice(audio_dev);
+            if (is->audios)
+                android_CloseAudioDevice(is->audios);
             decoder_destroy(&is->auddec);
             swr_free(&is->swr_ctx);
             av_freep(&is->audio_buf1);
             is->audio_buf1_size = 0;
             is->audio_buf = NULL;
-
+#if 0
             if (is->rdft) {
                 av_rdft_end(is->rdft);
                 av_freep(&is->rdft_data);
@@ -2329,6 +2339,12 @@ static void update_volume(VideoState *is, int sign, double step)
     double volume_level = is->audio_volume ? (20 * log(is->audio_volume / (double)SDL_MIX_MAXVOLUME) / log(10)) : -1000.0;
     int new_volume = lrint(SDL_MIX_MAXVOLUME * pow(10.0, (volume_level + sign * step) / 20.0));
     is->audio_volume = av_clip(is->audio_volume == new_volume ? (is->audio_volume + sign) : new_volume, 0, SDL_MIX_MAXVOLUME);
+}
+
+static void update_volume(VideoState *is, int volume)
+{
+    //update_volume(is, 1, SDL_VOLUME_STEP);
+    is->audio_volume = volume;
 }
 
 /* this thread gets the stream from the disk or the network */
