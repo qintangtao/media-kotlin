@@ -78,6 +78,19 @@ class DetailActivity : BaseActivity<DetailViewModel, ActivityDetailBinding>() {
             //val current_duration = mBinding.ptvPlayer.getCurrentDuration()
             //mBinding.tvCurrTime.text = mBinding.ptvPlayer.formatDuration(current_duration)
         }
+
+        mBinding.btnRateX05.setOnClickListener {
+            mBinding.ptvPlayer.setRate(500)
+        }
+        mBinding.btnRateX1.setOnClickListener {
+            mBinding.ptvPlayer.setRate(1000)
+        }
+        mBinding.btnRateX2.setOnClickListener {
+            mBinding.ptvPlayer.setRate(2000)
+        }
+        mBinding.btnRateX4.setOnClickListener {
+            mBinding.ptvPlayer.setRate(4000)
+        }
     }
 
     fun setVolume(percent: Int) {

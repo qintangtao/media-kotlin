@@ -35,6 +35,7 @@
 #else
 #include <android/log.h>
 #define TAG "native-lib"
+#define LOGD(...) __android_log_print(ANDROID_LOG_DEBUG, TAG, __VA_ARGS__)
 #define LOGV(...) __android_log_print(ANDROID_LOG_VERBOSE, TAG, __VA_ARGS__)
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, TAG, __VA_ARGS__)
 #endif
@@ -222,8 +223,15 @@ static SLresult openSLPlayOpen(OPENSL_STREAM *p)
         if(result != SL_RESULT_SUCCESS) goto end_openaudio;
 
         result =(*p->fdPlayerPlaybackRate)->SetPropertyConstraints(p->fdPlayerPlaybackRate, SL_RATEPROP_PITCHCORAUDIO);
-        if(result != SL_RESULT_SUCCESS) goto end_openaudio;
+        //if(result != SL_RESULT_SUCCESS) goto end_openaudio;
+        if (SL_RESULT_PARAMETER_INVALID == result)
+        { LOGE("Parameter Invalid"); }
+        if (SL_RESULT_FEATURE_UNSUPPORTED == result)
+        { LOGE("Feature Unsupported"); }
+        if (SL_RESULT_SUCCESS == result)
+        { LOGD("Success"); }
 
+        result = SL_RESULT_SUCCESS
         // set the player's state to playing
         //result = (*p->bqPlayerPlay)->SetPlayState(p->bqPlayerPlay, SL_PLAYSTATE_PLAYING);
 

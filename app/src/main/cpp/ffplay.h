@@ -48,5 +48,6 @@ int64_t get_current_duration(VideoState *is);
 
 void seek_pos(VideoState *is, int64_t pos);
 
+void set_rate(VideoState *is, int rate);
 
 #endif //NDKDEMO_FFPLAY_H

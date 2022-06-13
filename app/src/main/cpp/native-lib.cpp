@@ -778,6 +778,23 @@ Java_com_kotlin_media_DeviceSurface_ffmpegSeek(
     seek_pos(is, pos);
 }
 
+extern "C" JNIEXPORT void JNICALL
+Java_com_kotlin_media_DeviceSurface_ffmpegSetRate(
+        JNIEnv* env,
+        jobject /* this */,
+        jlong handle,
+        jint rate) {
+
+    VideoState *is = (VideoState *)handle;
+
+    const char *utf8 = stream_filename(is);
+
+    LOGV("Java_com_kotlin_media_DeviceSurface_ffmpegSetRate: %s, rate: %d\n", utf8, rate);
+
+    set_rate(is, rate);
+}
+
+
 void print_ffmpeg_info()
 {
 #if 0

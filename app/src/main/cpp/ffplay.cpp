@@ -3587,3 +3587,9 @@ int64_t get_current_duration(VideoState *is)
     int64_t pos = get_master_clock(is) * AV_TIME_BASE;
     return pos;
 }
+
+void set_rate(VideoState *is, int rate)
+{
+    if (is->audios)
+        android_SetRate(is->audios, rate);
+}

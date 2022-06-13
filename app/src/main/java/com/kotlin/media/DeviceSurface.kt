@@ -37,6 +37,9 @@ class DeviceSurface {
 
     external fun ffmpegSeek(handle: Long, pos: Long)
 
+    external fun ffmpegSetRate(handle: Long, rate: Int)
+
+
     companion object {
         // Used to load the 'native-lib' library on application startup.
         init {

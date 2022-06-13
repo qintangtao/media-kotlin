@@ -118,6 +118,13 @@ class PlayerTextureView  : TextureView, TextureView.SurfaceTextureListener {
         }
     }
 
+    fun setRate(rate: Int) {
+        Log.d("native-lib", "setRate: $mHandler $rate")
+        if (mHandler.compareTo(0) != 0) {
+            DeviceSurface.get().ffmpegSetRate(mHandler, rate)
+        }
+    }
+
     fun formatDuration(duration: Long) : String {
         val AV_TIME_BASE = 1000000
         var hours: Int
