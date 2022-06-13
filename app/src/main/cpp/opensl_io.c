@@ -177,10 +177,10 @@ static SLresult openSLPlayOpen(OPENSL_STREAM *p)
 
         // create audio playerplayer
 #if 1
-        const SLInterfaceID ids1[] = {SL_IID_ANDROIDSIMPLEBUFFERQUEUE, SL_IID_VOLUME};
-        const SLboolean req1[] = {SL_BOOLEAN_TRUE, SL_BOOLEAN_TRUE};
+        const SLInterfaceID ids1[] = {SL_IID_ANDROIDSIMPLEBUFFERQUEUE, SL_IID_VOLUME, SL_IID_PLAYBACKRATE};
+        const SLboolean req1[] = {SL_BOOLEAN_TRUE, SL_BOOLEAN_TRUE, SL_BOOLEAN_TRUE};
         result = (*p->engineEngine)->CreateAudioPlayer(p->engineEngine, &(p->bqPlayerObject), &audioSrc, &audioSnk,
-                               2, ids1, req1);
+                               3, ids1, req1);
 #else
         const SLInterfaceID ids1[3] = {SL_IID_SEEK, SL_IID_MUTESOLO, SL_IID_VOLUME};
         const SLboolean req1[3] = {SL_BOOLEAN_TRUE, SL_BOOLEAN_TRUE, SL_BOOLEAN_TRUE};
@@ -211,6 +211,19 @@ static SLresult openSLPlayOpen(OPENSL_STREAM *p)
         result = (*p->bqPlayerBufferQueue)->RegisterCallback(p->bqPlayerBufferQueue, bqPlayerCallback, p);
         if(result != SL_RESULT_SUCCESS) goto end_openaudio;
 
+
+        // get the playback rate interface
+        result = (*p->bqPlayerObject)->GetInterface(p->bqPlayerObject, SL_IID_PLAYBACKRATE, &(p->fdPlayerPlaybackRate));
+        if(result != SL_RESULT_SUCCESS) goto end_openaudio;
+
+        SLpermille stepSize;
+        SLuint32 capabilities;
+        result = (*p->fdPlayerPlaybackRate)->GetRateRange(p->fdPlayerPlaybackRate, 0, &(p->nMinRate), &(p->nMaxRate), &stepSize, &capabilities);
+        if(result != SL_RESULT_SUCCESS) goto end_openaudio;
+
+        result =(*p->fdPlayerPlaybackRate)->SetPropertyConstraints(p->fdPlayerPlaybackRate, SL_RATEPROP_PITCHCORAUDIO);
+        if(result != SL_RESULT_SUCCESS) goto end_openaudio;
+
         // set the player's state to playing
         //result = (*p->bqPlayerPlay)->SetPlayState(p->bqPlayerPlay, SL_PLAYSTATE_PLAYING);
 
@@ -221,6 +234,7 @@ static SLresult openSLPlayOpen(OPENSL_STREAM *p)
 
     return SL_RESULT_SUCCESS;
 }
+
 
 // Open the OpenSL ES device for input
 static SLresult openSLRecOpen(OPENSL_STREAM *p)
@@ -542,6 +556,43 @@ int android_AudioEnqueueOut(OPENSL_STREAM *p, const void *buffer,int size)
 {
     (*p->bqPlayerBufferQueue)->Enqueue(p->bqPlayerBufferQueue,
                                        buffer, size);
+}
+
+void setPitch(OPENSL_STREAM *p, float pitch)
+{
+    SLresult result;
+    SLpermille playbackRate = (SLpermille)1000 * pitch;
+
+    if (playbackRate < p->nMinRate)
+    {
+        playbackRate = p->nMinRate;
+    }
+    else if (playbackRate > p->nMaxRate)
+    {
+        playbackRate = p->nMaxRate;
+    }
+
+    // This works on Android 4.4.4 on Nexus 7, but not on Android 5.x on Nexus 7 or Nexus 9.
+    result = (*p->fdPlayerPlaybackRate)->SetRate(p->fdPlayerPlaybackRate, playbackRate);
+    (void)result;
+}
+
+
+void android_SetRate(OPENSL_STREAM *p, SLpermille rate)
+{
+    SLresult result;
+    result = (*p->fdPlayerPlaybackRate)->SetRate(p->fdPlayerPlaybackRate, rate);
+    (void)result;
+}
+
+SLpermille android_GetRate(OPENSL_STREAM *p)
+{
+    SLresult result;
+    SLpermille rate = 0;
+    result = (*p->fdPlayerPlaybackRate)->GetRate(p->fdPlayerPlaybackRate, &rate);
+    if (SL_RESULT_SUCCESS == result)
+        return rate;
+    return 0;
 }
 
 // returns timestamp of the processed stream

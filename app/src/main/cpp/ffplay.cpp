@@ -1749,6 +1749,7 @@ static void sdl_audio_callback(VideoState *opaque, uint8_t *stream, int len)
     is->audio_write_buf_size = is->audio_buf_size - is->audio_buf_index;
     /* Let's assume the audio driver that is used by SDL has two periods. */
     if (!isnan(is->audio_clock)) {
+        //static void set_clock_at(Clock *c, double pts, int serial, double time)
         set_clock_at(&is->audclk, is->audio_clock - (double)(2 * is->audio_hw_buf_size + is->audio_write_buf_size) / is->audio_tgt.bytes_per_sec, is->audio_clock_serial, is->audio_callback_time / 1000000.0);
         sync_clock_to_slave(&is->extclk, &is->audclk);
     }
@@ -1771,7 +1772,7 @@ void sl_audio_callback(
 
     android_AudioEnqueueOut(p, outBuffer,bufsamps);
 
-#if 1
+#if 0
     volume = android_GetVolume(is->audios);
     max_volume = android_GetMaxVolume(is->audios);
     double volume_level = is->audio_volume ? (20 * log(is->audio_volume / (double)SDL_MIX_MAXVOLUME) / log(10)) : -1000.0;
@@ -1847,8 +1848,9 @@ static int audio_open(VideoState *is, int64_t wanted_channel_layout, int wanted_
         return -1;
     }
 
-    av_log(NULL, AV_LOG_VERBOSE, "open audio device ! freq:%d, channels:%d, frame_size:%d\n",
-           audio_hw_params->freq, audio_hw_params->channels, audio_hw_params->frame_size);
+    SLpermille rate = android_GetRate(stream);
+    av_log(NULL, AV_LOG_VERBOSE, "open audio device ! freq:%d, channels:%d, frame_size:%d, nMinRate: %f, nMaxRate: %f, rate: %0.3f\n",
+           audio_hw_params->freq, audio_hw_params->channels, audio_hw_params->frame_size, stream->nMinRate, stream->nMaxRate, rate);
 
     android_RegisterCallback(stream, sl_audio_callback, is);
 

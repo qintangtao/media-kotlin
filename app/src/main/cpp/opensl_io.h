@@ -71,6 +71,11 @@ typedef struct opensl_stream {
     SLRecordItf recorderRecord;
     SLAndroidSimpleBufferQueueItf recorderBufferQueue;
 
+    //
+    SLPlaybackRateItf fdPlayerPlaybackRate;
+    SLpermille nMinRate;
+    SLpermille nMaxRate;
+
     // buffer indexes
     int currentInputIndex;
     int currentOutputIndex;
@@ -133,6 +138,10 @@ SLmillibel android_GetVolume(OPENSL_STREAM *p);
 SLmillibel android_GetMaxVolume(OPENSL_STREAM *p);
 
 int android_AudioEnqueueOut(OPENSL_STREAM *p, const void *buffer,int size);
+
+
+void android_SetRate(OPENSL_STREAM *p, SLpermille rate);
+SLpermille android_GetRate(OPENSL_STREAM *p);
 
 
 /*
