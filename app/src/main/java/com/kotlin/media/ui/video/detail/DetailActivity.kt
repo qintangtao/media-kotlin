@@ -51,7 +51,7 @@ class DetailActivity : BaseActivity<DetailViewModel, ActivityDetailBinding>() {
 
             override fun onStartTrackingTouch(seekBar: SeekBar?)
             {
-
+                viewModel.updateDuration(true)
             }
 
             override fun onStopTrackingTouch(seekBar: SeekBar?)
@@ -59,6 +59,7 @@ class DetailActivity : BaseActivity<DetailViewModel, ActivityDetailBinding>() {
                 val duration = mBinding.ptvPlayer.getDuration()
                 val x = duration * lastProgress /  Int.MAX_VALUE
                 mBinding.ptvPlayer.seek(x)
+                viewModel.updateDuration(false)
             }
         })
 

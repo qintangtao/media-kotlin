@@ -83,6 +83,10 @@ class DetailViewModel : BaseViewModel() {
     var isRefreshDurationExit = false
     var isRefreshDurationPaused = false
 
+    fun updateDuration(paused: Boolean) {
+        isRefreshDurationPaused = paused
+    }
+
     fun refreshDuration(ptvPlayer: PlayerTextureView) {
         isRefreshDurationExit = false
         isRefreshDurationPaused = false
