@@ -4,6 +4,7 @@
 
 #ifndef NDKDEMO_FFPLAY_H
 #define NDKDEMO_FFPLAY_H
+#include <stdint.h>
 
 typedef struct VideoState VideoState;
 typedef struct AVInputFormat AVInputFormat;
@@ -40,5 +41,12 @@ const char *stream_filename(VideoState *is);
 void *stream_surface(VideoState *is);
 
 void set_volume(VideoState *is, int volume);
+
+int64_t get_duration(VideoState *is);
+
+int64_t get_current_duration(VideoState *is);
+
+void seek_pos(VideoState *is, int64_t pos);
+
 
 #endif //NDKDEMO_FFPLAY_H

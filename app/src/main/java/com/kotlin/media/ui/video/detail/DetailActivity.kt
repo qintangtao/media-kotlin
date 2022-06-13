@@ -39,6 +39,8 @@ class DetailActivity : BaseActivity<DetailViewModel, ActivityDetailBinding>() {
             }
         })
 
+        mBinding.sbSeek.max = Int.MAX_VALUE
+
         mBinding.sbSeek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
 
             var lastProgress = 100
@@ -54,7 +56,9 @@ class DetailActivity : BaseActivity<DetailViewModel, ActivityDetailBinding>() {
 
             override fun onStopTrackingTouch(seekBar: SeekBar?)
             {
-
+                val duration = mBinding.ptvPlayer.getDuration()
+                val x = duration * lastProgress /  Int.MAX_VALUE
+                mBinding.ptvPlayer.seek(x)
             }
         })
 
@@ -63,6 +67,15 @@ class DetailActivity : BaseActivity<DetailViewModel, ActivityDetailBinding>() {
         }
         mBinding.btnForward.setOnClickListener {
             mBinding.ptvPlayer.fastForward()
+        }
+
+        mBinding.btnInfo.setOnClickListener {
+            val duration = mBinding.ptvPlayer.getDuration()
+            //var duration : Long = duration2 + (if (duration2 <= Long.MAX_VALUE - 5000) 5000 else 0)
+            mBinding.tvTime.text = mBinding.ptvPlayer.formatDuration(duration)
+
+            //val current_duration = mBinding.ptvPlayer.getCurrentDuration()
+            //mBinding.tvCurrTime.text = mBinding.ptvPlayer.formatDuration(current_duration)
         }
     }
 

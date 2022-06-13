@@ -7,6 +7,7 @@ import android.util.Log
 import android.view.Surface
 import android.view.TextureView
 import com.kotlin.media.DeviceSurface
+import java.time.Duration
 
 class PlayerTextureView  : TextureView, TextureView.SurfaceTextureListener {
 
@@ -94,6 +95,51 @@ class PlayerTextureView  : TextureView, TextureView.SurfaceTextureListener {
         }
     }
 
+    fun getDuration() : Long {
+        Log.d("native-lib", "getDuration: $mHandler")
+        if (mHandler.compareTo(0) != 0) {
+            return DeviceSurface.get().ffmpegDuration(mHandler)
+        }
+        return 0
+    }
+
+    fun getCurrentDuration() : Long {
+        Log.d("native-lib", "getCurrentDuration: $mHandler")
+        if (mHandler.compareTo(0) != 0) {
+            return DeviceSurface.get().ffmpegCurrentDuration(mHandler)
+        }
+        return 0
+    }
+
+    fun seek(pos: Long) {
+        Log.d("native-lib", "seek: $mHandler $pos")
+        if (mHandler.compareTo(0) != 0) {
+            DeviceSurface.get().ffmpegSeek(mHandler, pos)
+        }
+    }
+
+    fun formatDuration(duration: Long) : String {
+        val AV_TIME_BASE = 1000000
+        var hours: Int
+        var mins: Int
+        var secs: Int
+        var us: Int
+        var msecs: Int
+        secs  = (duration / AV_TIME_BASE).toInt()
+        us    = (duration % AV_TIME_BASE).toInt()
+        mins  = secs / 60
+        secs %= 60
+        hours = mins / 60
+        mins %= 60
+        msecs = (100 * us) / AV_TIME_BASE
+
+        val _hours = String.format("%02d", hours)
+        val _mins = String.format("%02d", mins)
+        val _secs = String.format("%02d", secs)
+        val _msecs = String.format("%02d", msecs)
+
+        return  "$_hours:$_mins:$_secs.$_msecs"
+    }
 
     fun state() : PlayState {
         return PlayState.UnconnectedState

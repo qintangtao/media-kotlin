@@ -2288,6 +2288,13 @@ static void stream_toggle_pause(VideoState *is)
     is->paused = is->audclk.paused = is->vidclk.paused = is->extclk.paused = !is->paused;
 }
 
+void seek_pos(VideoState *is, int64_t pos)
+{
+    if (is->ic->start_time != AV_NOPTS_VALUE && pos < is->ic->start_time)
+        pos = is->ic->start_time;
+    stream_seek(is, pos, 0, 0);
+}
+
 static void seek_chapter(VideoState *is, int incr)
 {
     int64_t pos = get_master_clock(is) * AV_TIME_BASE;
@@ -3564,4 +3571,17 @@ void set_volume(VideoState *is, int volume)
     max_volume = android_GetMaxVolume(is->audios);
 
     av_log(NULL, AV_LOG_DEBUG, "set_volume %d %d\n", volume, max_volume);
+}
+
+int64_t get_duration(VideoState *is)
+{
+    if (is->ic)
+        return is->ic->duration;
+    return 0;
+}
+
+int64_t get_current_duration(VideoState *is)
+{
+    int64_t pos = get_master_clock(is) * AV_TIME_BASE;
+    return pos;
 }

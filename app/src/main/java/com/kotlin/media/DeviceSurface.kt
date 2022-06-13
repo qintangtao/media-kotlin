@@ -31,7 +31,11 @@ class DeviceSurface {
 
     external fun ffmpegSetVolume(handle: Long, volume: Long)
 
+    external fun ffmpegDuration(handle: Long) : Long
 
+    external fun ffmpegCurrentDuration(handle: Long) : Long
+
+    external fun ffmpegSeek(handle: Long, pos: Long)
 
     companion object {
         // Used to load the 'native-lib' library on application startup.

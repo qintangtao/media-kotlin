@@ -109,6 +109,7 @@
         android:layout_height="wrap_content"
         android:layout_width="match_parent"
         android:text="进度"
+        android:progress="@{viewModel.progress}"
         android:layout_marginTop="9dp"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"
@@ -119,6 +120,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="后退"
+        android:textColor="@color/black"
         android:layout_marginTop="9dp"
         android:layout_marginStart="9dp"
         app:layout_constraintLeft_toLeftOf="parent"
@@ -130,11 +132,48 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="快进"
+        android:textColor="@color/black"
+        android:layout_marginTop="9dp"
+        android:layout_marginStart="9dp"
+        app:layout_constraintLeft_toRightOf="@+id/btnBack"
+        app:layout_constraintTop_toBottomOf="@+id/sbSeek"
+        />
+
+    <Button
+        android:id="@+id/btnInfo"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="信息"
+        android:textColor="@color/black"
+        android:layout_marginTop="9dp"
+        android:layout_marginStart="9dp"
+        app:layout_constraintLeft_toRightOf="@+id/btnForward"
+        app:layout_constraintTop_toBottomOf="@+id/sbSeek"
+        />
+
+
+    <TextView
+        android:id="@+id/tvTime"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
         android:layout_marginTop="9dp"
         android:layout_marginEnd="9dp"
+        android:text="02:30:33.12"
         app:layout_constraintRight_toRightOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/sbSeek"
         />
+
+    <TextView
+        android:id="@+id/tvCurrTime"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="9dp"
+        android:layout_marginEnd="9dp"
+        android:text="@{viewModel.currentDuration}"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/tvTime"
+        />
+
 
 </androidx.constraintlayout.widget.ConstraintLayout>
 </layout>

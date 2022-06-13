@@ -728,6 +728,56 @@ Java_com_kotlin_media_DeviceSurface_ffmpegSetVolume(
     set_volume(is, volume);
 }
 
+extern "C" JNIEXPORT jlong JNICALL
+Java_com_kotlin_media_DeviceSurface_ffmpegDuration(
+        JNIEnv* env,
+        jobject /* this */,
+        jlong handle) {
+
+    VideoState *is = (VideoState *)handle;
+
+    const char *utf8 = stream_filename(is);
+
+    int64_t duration = get_duration(is);
+
+    LOGV("Java_com_kotlin_media_DeviceSurface_ffmpegDuration: %s, duration: %d\n", utf8, duration);
+
+    return duration;
+}
+
+extern "C" JNIEXPORT jlong JNICALL
+Java_com_kotlin_media_DeviceSurface_ffmpegCurrentDuration(
+        JNIEnv* env,
+        jobject /* this */,
+        jlong handle) {
+
+    VideoState *is = (VideoState *)handle;
+
+    const char *utf8 = stream_filename(is);
+
+    int64_t duration = get_current_duration(is);
+
+    LOGV("Java_com_kotlin_media_DeviceSurface_ffmpegCurrentDuration: %s, duration: %d\n", utf8, duration);
+
+    return duration;
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_kotlin_media_DeviceSurface_ffmpegSeek(
+        JNIEnv* env,
+        jobject /* this */,
+        jlong handle,
+        jlong pos) {
+
+    VideoState *is = (VideoState *)handle;
+
+    const char *utf8 = stream_filename(is);
+
+    LOGV("Java_com_kotlin_media_DeviceSurface_ffmpegSeek: %s, pos: %d\n", utf8, pos);
+
+    seek_pos(is, pos);
+}
+
 void print_ffmpeg_info()
 {
 #if 0
