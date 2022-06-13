@@ -222,6 +222,10 @@ static SLresult openSLPlayOpen(OPENSL_STREAM *p)
         result = (*p->fdPlayerPlaybackRate)->GetRateRange(p->fdPlayerPlaybackRate, 0, &(p->nMinRate), &(p->nMaxRate), &stepSize, &capabilities);
         if(result != SL_RESULT_SUCCESS) goto end_openaudio;
 
+        //SLpermille rate;
+        //result = (*p->fdPlayerPlaybackRate)->GetCapabilitiesOfRate(p->fdPlayerPlaybackRate,rate, &capabilities);
+        //if(result != SL_RESULT_SUCCESS) goto end_openaudio;
+
         result =(*p->fdPlayerPlaybackRate)->SetPropertyConstraints(p->fdPlayerPlaybackRate, SL_RATEPROP_PITCHCORAUDIO);
         //if(result != SL_RESULT_SUCCESS) goto end_openaudio;
         if (SL_RESULT_PARAMETER_INVALID == result)
