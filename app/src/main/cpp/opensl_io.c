@@ -231,7 +231,7 @@ static SLresult openSLPlayOpen(OPENSL_STREAM *p)
         if (SL_RESULT_SUCCESS == result)
         { LOGD("Success"); }
 
-        result = SL_RESULT_SUCCESS
+        result = SL_RESULT_SUCCESS;
         // set the player's state to playing
         //result = (*p->bqPlayerPlay)->SetPlayState(p->bqPlayerPlay, SL_PLAYSTATE_PLAYING);
 
@@ -590,7 +590,7 @@ void android_SetRate(OPENSL_STREAM *p, SLpermille rate)
 {
     SLresult result;
     result = (*p->fdPlayerPlaybackRate)->SetRate(p->fdPlayerPlaybackRate, rate);
-    (void)result;
+    LOGD("android_SetRate: %d", result);
 }
 
 SLpermille android_GetRate(OPENSL_STREAM *p)
