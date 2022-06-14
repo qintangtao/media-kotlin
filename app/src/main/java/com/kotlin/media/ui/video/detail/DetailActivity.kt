@@ -6,15 +6,20 @@ import android.widget.SeekBar
 import com.kotlin.media.databinding.ActivityDetailBinding
 import com.kotlin.media.model.bean.Video
 import com.kotlin.mvvm.base.BaseActivity
+import com.kotlin.mvvm.bus.Bus
+import java.util.ArrayList
 
 class DetailActivity : BaseActivity<DetailViewModel, ActivityDetailBinding>() {
+
+    private val rateFragment by lazy { RateListDialogFragment.newInstance() }
+
 
     companion object {
         const val PARAM_VIDEO = "param_video"
     }
 
     override fun initView(savedInstanceState: Bundle?) {
-        Log.d("native-lib", "mBinding is $mBinding")
+        Log.d("native-lib", "mBinding is $mBinding, viewModel is $viewModel")
         mBinding.viewModel = viewModel
 
         mBinding.volumeUri.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
@@ -79,19 +84,23 @@ class DetailActivity : BaseActivity<DetailViewModel, ActivityDetailBinding>() {
             //mBinding.tvCurrTime.text = mBinding.ptvPlayer.formatDuration(current_duration)
         }
 
-        mBinding.btnRateX05.setOnClickListener {
-            mBinding.ptvPlayer.setRate(500)
+        mBinding.btnRate.setOnClickListener {
+            rateFragment.show(supportFragmentManager)
         }
-        mBinding.btnRateX1.setOnClickListener {
-            mBinding.ptvPlayer.setRate(1000)
-        }
-        mBinding.btnRateX2.setOnClickListener {
-            mBinding.ptvPlayer.setRate(2000)
-        }
-        mBinding.btnRateX4.setOnClickListener {
-            mBinding.ptvPlayer.setRate(4000)
+
+        Bus.observe<Int>("RATE", this) {
+            mBinding.ptvPlayer.setRate(it)
         }
     }
+
+    override fun initData() {
+        (intent.getParcelableExtra(PARAM_VIDEO) as? Video)?.let {
+            viewModel.setBean(it)
+        }
+
+        viewModel.initData()
+    }
+
 
     fun setVolume(percent: Int) {
         var volume_level  = 0
@@ -115,13 +124,6 @@ class DetailActivity : BaseActivity<DetailViewModel, ActivityDetailBinding>() {
             volume_level = (100 - percent) * -100
         }
         mBinding.ptvPlayer.setVolume(volume_level)
-    }
-
-
-    override fun initData() {
-        (intent.getParcelableExtra(PARAM_VIDEO) as? Video)?.let {
-            viewModel.setBean(it)
-        }
     }
 
 }

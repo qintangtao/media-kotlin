@@ -114,6 +114,8 @@ dependencies {
     //room
     api rootProject.ext.room["room-runtime"]
     api rootProject.ext.room["room-ktx"]
+    implementation 'androidx.legacy:legacy-support-v4:1.0.0'
+    implementation 'androidx.recyclerview:recyclerview:1.2.1'
     kapt rootProject.ext.room["room-compiler"]
     //Hilt
     implementation rootProject.ext.hilt['daggerRuntime']

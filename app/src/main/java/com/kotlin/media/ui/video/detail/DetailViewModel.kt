@@ -9,8 +9,10 @@ import com.kotlin.media.DeviceSurface
 import com.kotlin.media.R
 import com.kotlin.media.model.bean.Video
 import com.kotlin.media.ui.view.PlayerTextureView
+import com.kotlin.mvvm.BR
 import com.kotlin.mvvm.base.BaseViewModel
 import com.kotlin.mvvm.base.OnItemClickListener
+import com.kotlin.mvvm.bus.Bus
 import com.kotlin.mvvm.event.Message
 import com.kotlin.mvvm.network.ExceptionHandle
 import com.kotlin.mvvm.network.RESULT
@@ -20,6 +22,7 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
+import me.tatarka.bindingcollectionadapter2.ItemBinding
 
 class DetailViewModel : BaseViewModel() {
 
@@ -80,8 +83,35 @@ class DetailViewModel : BaseViewModel() {
         _itemBean.value = item
     }
 
+
+    private val _rate = MutableLiveData<String>()
+
+    val rate: LiveData<String> = _rate
+
+    val listenner2 = object : OnItemClickListener<String> {
+        override fun onClick(view: View, item: String) {
+            Log.d("native-lib", "onClick is $item")
+            Bus.post("HIDDEN_RATE", item)
+            setRate(item)
+        }
+    }
+
+    private val _items = MutableLiveData<MutableList<String>>()
+    val items: LiveData<MutableList<String>> = _items
+    val itemBinding = ItemBinding.of<String>(BR.itemBean, R.layout.fragment_rate_list_dialog_list_dialog_item)
+        .bindExtra(BR.listenner, listenner2)
+
     var isRefreshDurationExit = false
     var isRefreshDurationPaused = false
+
+    private val rates = listOf<String>("4X", "3X", "2X", "1.25x", "正常", "0.5X")
+    private val ratev = listOf<Int>(2000, 1750, 1500, 1250, 1000, 500)
+
+
+    fun initData() {
+        _items.value = rates.toMutableList()
+        _rate.value = "正常"
+    }
 
     fun updateDuration(paused: Boolean) {
         isRefreshDurationPaused = paused
@@ -101,7 +131,7 @@ class DetailViewModel : BaseViewModel() {
 
                     val duration = ptvPlayer.getCurrentDuration()
                     emit(duration)
-                    delay(100)
+                    delay(200)
                 }
             }
             .flowOn(Dispatchers.IO)
@@ -119,4 +149,8 @@ class DetailViewModel : BaseViewModel() {
         }
     }
 
+    fun setRate(rate: String) {
+        _rate.value = rate
+        Bus.post("RATE", ratev.get(rates.indexOf(rate)))
+    }
 }

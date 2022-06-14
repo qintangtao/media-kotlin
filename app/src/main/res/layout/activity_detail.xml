@@ -176,47 +176,14 @@
 
 
     <Button
-        android:id="@+id/btnRate_x0.5"
+        android:id="@+id/btnRate"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="x0.5"
+        android:text="@{viewModel.rate}"
         android:textColor="@color/black"
         android:layout_marginTop="9dp"
         android:layout_marginStart="9dp"
         app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/btnBack"
-        />
-    <Button
-        android:id="@+id/btnRate_x1"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="x1"
-        android:textColor="@color/black"
-        android:layout_marginTop="9dp"
-        android:layout_marginStart="9dp"
-        app:layout_constraintLeft_toRightOf="@+id/btnRate_x0.5"
-        app:layout_constraintTop_toBottomOf="@+id/btnBack"
-        />
-    <Button
-        android:id="@+id/btnRate_x2"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="x2"
-        android:textColor="@color/black"
-        android:layout_marginTop="9dp"
-        android:layout_marginStart="9dp"
-        app:layout_constraintLeft_toRightOf="@+id/btnRate_x1"
-        app:layout_constraintTop_toBottomOf="@+id/btnBack"
-        />
-    <Button
-        android:id="@+id/btnRate_x4"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="x4"
-        android:textColor="@color/black"
-        android:layout_marginTop="9dp"
-        android:layout_marginStart="9dp"
-        app:layout_constraintLeft_toRightOf="@+id/btnRate_x2"
         app:layout_constraintTop_toBottomOf="@+id/btnBack"
         />
 
