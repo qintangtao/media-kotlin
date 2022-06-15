@@ -1229,6 +1229,7 @@ static int get_video_frame(VideoState *is, AVFrame *frame)
 
         frame->sample_aspect_ratio = av_guess_sample_aspect_ratio(is->ic, is->video_st, frame);
 
+        // 早期丢帧 ， 晚期丢帧（播放阶段）
         if (is->framedrop>0 || (is->framedrop && get_master_sync_type(is) != AV_SYNC_VIDEO_MASTER)) {
             if (frame->pts != AV_NOPTS_VALUE) {
                 double diff = dpts - get_master_clock(is);
@@ -3129,14 +3130,18 @@ static void video_refresh(VideoState *is, double *remaining_time)
             Frame *vp, *lastvp;
 
             /* dequeue the picture */
+            // 第一次进来 lastvp == vp
+            // 后面进来   播放的最后一个不释放
             lastvp = frame_queue_peek_last(&is->pictq);
             vp = frame_queue_peek(&is->pictq);
 
+            // seek  重新设置播放点(快进...),跳过新播放点前的数据
             if (vp->serial != is->videoq.serial) {
                 frame_queue_next(&is->pictq);
                 goto retry;
             }
 
+            // seek 后 重新设置最后播放帧的时间
             if (lastvp->serial != vp->serial)
                 is->frame_timer = av_gettime_relative() / 1000000.0;
 
@@ -3144,29 +3149,35 @@ static void video_refresh(VideoState *is, double *remaining_time)
                 goto display;
 
             /* compute nominal last_duration */
+            // 两帧的理论间隔时间
             last_duration = vp_duration(is, lastvp, vp);
             delay = compute_target_delay(last_duration, is);
 
-
             time= av_gettime_relative()/1000000.0;
-            //av_log(NULL, AV_LOG_DEBUG, "wait tarrget delay %d %ld %d\n", delay, time, is->frame_timer);
+            // 还未到播放时间
             if (time < is->frame_timer + delay) {
                 *remaining_time = FFMIN(is->frame_timer + delay - time, *remaining_time);
                 goto display;
             }
 
+            // 当前帧的播放时间
             is->frame_timer += delay;
             if (delay > 0 && time - is->frame_timer > AV_SYNC_THRESHOLD_MAX)
                 is->frame_timer = time;
 
+            // 更新视频时钟
             pthread_mutex_lock(&is->pictq.mutex);
             if (!isnan(vp->pts))
                 update_video_pts(is, vp->pts, vp->pos, vp->serial);
             pthread_mutex_unlock(&is->pictq.mutex);
 
+            // 除了保留最后一帧， 还有多帧
+            // 如果下一帧也到了播放时间，则丢弃当前帧
             if (frame_queue_nb_remaining(&is->pictq) > 1) {
+                //待播放的下一帧
                 Frame *nextvp = frame_queue_peek_next(&is->pictq);
                 duration = vp_duration(is, vp, nextvp);
+                // 待播放的下一帧理论播放时间 晚于 当前时间，则丢弃当前待播放的帧
                 if(!is->step && (is->framedrop>0 || (is->framedrop && get_master_sync_type(is) != AV_SYNC_VIDEO_MASTER)) && time > is->frame_timer + duration){
                     is->frame_drops_late++;
                     frame_queue_next(&is->pictq);
