@@ -110,7 +110,7 @@ class DetailViewModel : BaseViewModel() {
 
     fun initData() {
         _items.value = rates.toMutableList()
-        _rate.value = "正常"
+        _rate.value = rates[4]
     }
 
     fun updateDuration(paused: Boolean) {
@@ -136,21 +136,26 @@ class DetailViewModel : BaseViewModel() {
             }
             .flowOn(Dispatchers.IO)
             .collect {
-                //updateDuration()
                 val duration = ptvPlayer.getDuration()
-                val current_duration = it
+                var current_duration = it
+                if (duration > 0 && current_duration > duration)
+                    current_duration = duration
+
                 if (duration.compareTo(0) != 0) {
                     val x = current_duration *  Int.MAX_VALUE
                     val y = x / duration
                     _progress.value = y.toInt()
                 }
                 _currentDuration.value = ptvPlayer.formatDuration(current_duration)
+
+                if (current_duration > 0 && current_duration == duration)
+                    isRefreshDurationExit = true
             }
         }
     }
 
     fun setRate(rate: String) {
         _rate.value = rate
-        Bus.post("RATE", ratev.get(rates.indexOf(rate)))
+        Bus.post("RATE", ratev[rates.indexOf(rate)])
     }
 }

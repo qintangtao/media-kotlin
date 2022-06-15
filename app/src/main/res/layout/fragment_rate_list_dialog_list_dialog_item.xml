@@ -13,11 +13,12 @@
     android:layout_height="wrap_content"
     android:background="?attr/selectableItemBackground"
     android:text="@{itemBean}"
+    android:textAlignment="center"
     android:paddingLeft="@dimen/list_item_spacing"
     android:paddingTop="@dimen/list_item_spacing_half"
     android:paddingRight="@dimen/list_item_spacing"
     android:paddingBottom="@dimen/list_item_spacing_half"
-    android:textAppearance="@style/TextAppearance.AppCompat.Large"
+    android:textAppearance="@style/TextAppearance.AppCompat.Subhead"
     android:onClick="@{(view)->listenner.onClick(view, itemBean)}"
     tools:text="Hello" />
 </layout>

@@ -1710,17 +1710,18 @@ static int audio_decode_frame(VideoState *is)
 }
 
 /* prepare a new audio buffer */
-static void sdl_audio_callback(VideoState *opaque, uint8_t *stream, int len)
+static int sdl_audio_callback(VideoState *opaque, uint8_t *stream, int len)
 {
     VideoState *is = opaque;
     int audio_size, len1;
 
-    is->audio_callback_time = av_gettime_relative();
+    //is->audio_callback_time = av_gettime_relative();
 
     while (len > 0) {
         if (is->audio_buf_index >= is->audio_buf_size) {
             audio_size = audio_decode_frame(is);
             if (audio_size < 0) {
+                return -1;
                 /* if error, just output silence */
                 is->audio_buf = NULL;
                 is->audio_buf_size = SDL_AUDIO_MIN_BUFFER_SIZE / is->audio_tgt.frame_size * is->audio_tgt.frame_size;
@@ -1747,12 +1748,17 @@ static void sdl_audio_callback(VideoState *opaque, uint8_t *stream, int len)
         is->audio_buf_index += len1;
     }
     is->audio_write_buf_size = is->audio_buf_size - is->audio_buf_index;
+
+    is->audio_callback_time = av_gettime_relative();
+
     /* Let's assume the audio driver that is used by SDL has two periods. */
     if (!isnan(is->audio_clock)) {
         //static void set_clock_at(Clock *c, double pts, int serial, double time)
         set_clock_at(&is->audclk, is->audio_clock - (double)(2 * is->audio_hw_buf_size + is->audio_write_buf_size) / is->audio_tgt.bytes_per_sec, is->audio_clock_serial, is->audio_callback_time / 1000000.0);
         sync_clock_to_slave(&is->extclk, &is->audclk);
     }
+
+    return 0;
 }
 
 void sl_audio_callback(
@@ -1763,14 +1769,17 @@ void sl_audio_callback(
     SLmillibel volume, max_volume;
     VideoState *is = (VideoState *)pContext;
 
-    av_log(NULL, AV_LOG_DEBUG, "sl_audio_callback %d\n", p->outBufSamples);
+    int64_t pos = get_master_clock(is) * AV_TIME_BASE;
+    av_log(NULL, AV_LOG_DEBUG, "sl_audio_callback,  master_type: %d, master clock:  %" PRId64"\n", get_master_sync_type(is),  pos);
 
     short *outBuffer = p->outputBuffer[p->currentOutputBuffer];
     int bufsamps = p->outBufSamples*sizeof(short);
 
-    sdl_audio_callback(is, reinterpret_cast<uint8_t *>(outBuffer), bufsamps);
+    if (!sdl_audio_callback(is, reinterpret_cast<uint8_t *>(outBuffer), bufsamps))
+        android_AudioEnqueueOut(p, outBuffer, bufsamps);
 
-    android_AudioEnqueueOut(p, outBuffer,bufsamps);
+    pos = get_master_clock(is) * AV_TIME_BASE;
+    av_log(NULL, AV_LOG_DEBUG, "sl_audio_callback2 master clock:  %" PRId64"\n", pos);
 
 #if 0
     volume = android_GetVolume(is->audios);
@@ -2665,7 +2674,9 @@ static void *read_thread(void *arg) {
         avformat_close_input(&ic);
 
     if (ret != 0) {
-#if 0
+#if 1
+        send_event(is, FF_EVENT_QUIT);
+#else
         SDL_Event event;
 
         event.type = FF_QUIT_EVENT;
@@ -3306,29 +3317,46 @@ static void *event_thread(void *arg) {
             case FF_EVENT_FAST_FORWARD:
                 incr = is->seek_interval ? is->seek_interval : 10.0;
             do_seek:
-                    if (is->seek_by_bytes) {
-                        pos = -1;
-                        if (pos < 0 && is->video_stream >= 0)
-                            pos = frame_queue_last_pos(&is->pictq);
-                        if (pos < 0 && is->audio_stream >= 0)
-                            pos = frame_queue_last_pos(&is->sampq);
-                        if (pos < 0)
-                            pos = avio_tell(is->ic->pb);
-                        if (is->ic->bit_rate)
-                            incr *= is->ic->bit_rate / 8.0;
-                        else
-                            incr *= 180000.0;
-                        pos += incr;
-                        stream_seek(is, pos, incr, 1);
-                    } else {
-                        pos = get_master_clock(is);
-                        if (isnan(pos))
-                            pos = (double)is->seek_pos / AV_TIME_BASE;
-                        pos += incr;
-                        if (is->ic->start_time != AV_NOPTS_VALUE && pos < is->ic->start_time / (double)AV_TIME_BASE)
-                            pos = is->ic->start_time / (double)AV_TIME_BASE;
-                        stream_seek(is, (int64_t)(pos * AV_TIME_BASE), (int64_t)(incr * AV_TIME_BASE), 0);
+                if (is->seek_by_bytes) {
+                    pos = -1;
+                    if (pos < 0 && is->video_stream >= 0)
+                        pos = frame_queue_last_pos(&is->pictq);
+                    if (pos < 0 && is->audio_stream >= 0)
+                        pos = frame_queue_last_pos(&is->sampq);
+                    if (pos < 0)
+                        pos = avio_tell(is->ic->pb);
+                    if (is->ic->bit_rate)
+                        incr *= is->ic->bit_rate / 8.0;
+                    else
+                        incr *= 180000.0;
+                    pos += incr;
+                    stream_seek(is, pos, incr, 1);
+                } else {
+                    pos = get_master_clock(is);
+                    if (isnan(pos))
+                        pos = (double) is->seek_pos / AV_TIME_BASE;
+                    pos += incr;
+                    if (is->ic->start_time != AV_NOPTS_VALUE &&
+                        pos < is->ic->start_time / (double) AV_TIME_BASE)
+                        pos = is->ic->start_time / (double) AV_TIME_BASE;
+                    stream_seek(is, (int64_t) (pos * AV_TIME_BASE), (int64_t) (incr * AV_TIME_BASE),
+                                0);
+                }
+                break;
+            case FF_EVENT_QUIT:
+                is->abort_request = 1;
+                if (is->audio_stream >= 0) {
+                    decoder_abort(&is->auddec, &is->sampq);
+                    if (is->audios) {
+                        android_CloseAudioDevice(is->audios);
+                        is->audios = NULL;
                     }
+                }
+                if (is->video_stream >= 0)
+                    decoder_abort(&is->viddec, &is->pictq);
+                if (is->subtitle_stream >= 0)
+                    decoder_abort(&is->subdec, &is->subpq);
+                event_queue_abort(is->looper.queue);
                 break;
             default:
                 break;

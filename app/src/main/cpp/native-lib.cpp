@@ -740,7 +740,7 @@ Java_com_kotlin_media_DeviceSurface_ffmpegDuration(
 
     int64_t duration = get_duration(is);
 
-    LOGV("Java_com_kotlin_media_DeviceSurface_ffmpegDuration: %s, duration: %d\n", utf8, duration);
+    LOGV("Java_com_kotlin_media_DeviceSurface_ffmpegDuration: %s, duration: %" PRId64"\n", utf8, duration);
 
     return duration;
 }
@@ -757,7 +757,7 @@ Java_com_kotlin_media_DeviceSurface_ffmpegCurrentDuration(
 
     int64_t duration = get_current_duration(is);
 
-    LOGV("Java_com_kotlin_media_DeviceSurface_ffmpegCurrentDuration: %s, duration: %d\n", utf8, duration);
+    LOGV("Java_com_kotlin_media_DeviceSurface_ffmpegCurrentDuration: %s, duration: %" PRId64"\n", utf8, duration);
 
     return duration;
 }

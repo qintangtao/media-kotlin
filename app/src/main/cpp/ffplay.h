@@ -17,7 +17,7 @@ enum ffEvent{
     FF_EVENT_NEXT_FRAME,         //下一帧
     FF_EVENT_FAST_BACK,         //后退
     FF_EVENT_FAST_FORWARD,      //快进
-
+    FF_EVENT_QUIT               //退出
 };
 
 VideoState *stream_open(const char *filename, AVInputFormat *iformat, void *surface);
