@@ -19,6 +19,9 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Mediakotlin">
         <activity
+            android:name=".ui.group.VideoGroupActivity"
+            android:exported="false" />
+        <activity
             android:name=".ui.video.edit.EditActivity"
             android:exported="false" />
         <activity

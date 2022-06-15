@@ -9,6 +9,7 @@ import androidx.core.app.ActivityCompat
 import com.jcodecraeer.xrecyclerview.ProgressStyle
 import com.jcodecraeer.xrecyclerview.XRecyclerView
 import com.kotlin.media.databinding.ActivityMainBinding
+import com.kotlin.media.ui.group.VideoGroupActivity
 import com.kotlin.media.ui.video.edit.EditActivity
 import com.kotlin.mvvm.base.BaseActivity
 import dagger.hilt.android.AndroidEntryPoint
@@ -37,7 +38,9 @@ class MainActivity : BaseActivity<MainViewModel, ActivityMainBinding>() {
             }
         }
 
-        mBinding.ivAdd.setOnClickListener { startActivity(Intent(this, EditActivity::class.java))  }
+        //mBinding.ivAdd.setOnClickListener { startActivity(Intent(this, EditActivity::class.java))  }
+        mBinding.ivAdd.setOnClickListener { startActivity(Intent(this, VideoGroupActivity::class.java))  }
+
     }
 
     override fun initData() {

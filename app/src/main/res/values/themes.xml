@@ -21,7 +21,6 @@
         <item name="android:windowLightStatusBar">true</item>
 
 
-
         <!-- Customize your theme here. -->
         <item name="android:textColorPrimary">@color/black</item>
 
@@ -50,5 +49,14 @@
     <style name="negativeBtnstyle" parent="Widget.AppCompat.Button.ButtonBar.AlertDialog">
         <item name="android:textColor">@color/textColorSecondary</item>
     </style>
+
+    <style name="Theme.Mediakotlin.NoActionBar">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+    </style>
+
+    <style name="Theme.Mediakotlin.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar" />
+
+    <style name="Theme.Mediakotlin.PopupOverlay" parent="ThemeOverlay.AppCompat.Light" />
 
 </resources>
