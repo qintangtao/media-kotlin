@@ -36,19 +36,37 @@
 
     </RelativeLayout>
 
-
-    <ExpandableListView
-        android:id="@+id/elvVideo"
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:groupIndicator="@null"
-        android:divider="@null"
-        android:childDivider="@android:color/transparent"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/rlBar" />
+        app:layout_constraintTop_toBottomOf="@+id/rlBar"> >
+        <ExpandableListView
+            android:id="@+id/elvVideo"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:groupIndicator="@null"
+            android:divider="@null"
+            android:childDivider="@android:color/transparent"
+             />
+
+        <TextView
+            android:id="@+id/tvFloatTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingStart="12dp"
+            android:paddingTop="9dp"
+            android:paddingBottom="9dp"
+            android:background="@color/white"
+            android:textColor="@color/black"
+            tools:text="常用网站" />
+
+    </FrameLayout>
+
+
 
 
 </androidx.constraintlayout.widget.ConstraintLayout>
