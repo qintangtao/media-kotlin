@@ -88,8 +88,6 @@ class VideoGroupActivity : BaseActivity<NoViewModel, ActivityVideoGroupBinding>(
             true
         }
 
-        mBinding.tvFloatTitle.text = groups[currentPosition]
-
         mBinding.elvVideo.setOnScrollListener(object : AbsListView.OnScrollListener {
 
             override fun onScrollStateChanged(view: AbsListView?, scrollState: Int) {}
@@ -105,13 +103,13 @@ class VideoGroupActivity : BaseActivity<NoViewModel, ActivityVideoGroupBinding>(
                     if (it.tag is ItemVideoGroupBinding) {
                         val binding = it.tag as ItemVideoGroupBinding
                         //Log.d("native-lib", "firstVisibleView ItemVideoGroupBinding tag:${binding.tvName.tag as Int}")
-                        mBinding.tvFloatTitle.text = adapter.getGroup(binding.tvName.tag as Int)!!.toString()
+                        mBinding.tvFloatTitle.text = adapter.getGroup(binding.tvName.tag as Int).toString()
                     }
 
                     if (it.tag is ItemVideoChildrenBinding) {
                         val binding = it.tag as ItemVideoChildrenBinding
                         //Log.d("native-lib", "firstVisibleView ItemVideoChildrenBinding tag:${binding.tvName.tag as Int}")
-                        mBinding.tvFloatTitle.text = adapter.getGroup(binding.tvName.tag as Int)!!.toString()
+                        mBinding.tvFloatTitle.text = adapter.getGroup(binding.tvName.tag as Int).toString()
                     }
                 }
 
@@ -136,6 +134,14 @@ class VideoGroupActivity : BaseActivity<NoViewModel, ActivityVideoGroupBinding>(
     }
 
     override fun initData() {
+
+        if (adapter.groupCount > 0) {
+            mBinding.tvFloatTitle.visibility = View.VISIBLE
+            mBinding.tvFloatTitle.text = adapter.getGroup(0).toString()
+        } else {
+            mBinding.tvFloatTitle.visibility = View.GONE
+        }
+
         mBinding.elvVideo.setAdapter(adapter)
     }
 

@@ -1,11 +1,12 @@
 package com.kotlin.media.ui.video.detail
 
 import android.util.Log
+import android.view.Gravity
 import android.view.View
+import android.view.WindowManager
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
-import com.kotlin.media.DeviceSurface
 import com.kotlin.media.R
 import com.kotlin.media.model.bean.Video
 import com.kotlin.media.ui.view.PlayerTextureView
@@ -13,16 +14,13 @@ import com.kotlin.mvvm.BR
 import com.kotlin.mvvm.base.BaseViewModel
 import com.kotlin.mvvm.base.OnItemClickListener
 import com.kotlin.mvvm.bus.Bus
-import com.kotlin.mvvm.event.Message
-import com.kotlin.mvvm.network.ExceptionHandle
-import com.kotlin.mvvm.network.RESULT
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
 import me.tatarka.bindingcollectionadapter2.ItemBinding
+
 
 class DetailViewModel : BaseViewModel() {
 
@@ -82,7 +80,6 @@ class DetailViewModel : BaseViewModel() {
     fun setBean(item : Video) {
         _itemBean.value = item
     }
-
 
     private val _rate = MutableLiveData<String>()
 
