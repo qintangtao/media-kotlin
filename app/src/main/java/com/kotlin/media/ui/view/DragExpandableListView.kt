@@ -1,6 +1,5 @@
 package com.kotlin.media.ui.view
 
-import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.PixelFormat
@@ -14,6 +13,9 @@ import android.view.View
 import android.view.WindowManager
 import android.widget.ExpandableListView
 import android.widget.ImageView
+import com.blankj.utilcode.util.BarUtils
+import com.blankj.utilcode.util.ScreenUtils
+import com.blankj.utilcode.util.SizeUtils
 
 
 class DragExpandableListView : ExpandableListView {
@@ -41,6 +43,10 @@ class DragExpandableListView : ExpandableListView {
 
     private var mDragBitmap: Bitmap? = null
     private var mDragImageView: ImageView? = null
+
+    private val dragImageHeight by lazy { SizeUtils.dp2px(40.0f) }
+    private val dragImageWidth by lazy { SizeUtils.dp2px(100.0f) }
+
 
     private var lastDownTime: Long = 0
     private var currDownTime: Long = 0
@@ -115,24 +121,21 @@ class DragExpandableListView : ExpandableListView {
         return super.onTouchEvent(ev)
     }
 
-
     private fun onDragItem(x: Float, y: Float) {
         Log.d(TAG, "onDragItem: x:$x, y:$y")
-        val locationOnScreen = getLocationOnScreen(this)
-        mWindowLayoutParams.x = getLocationWidth(x.toInt(), locationOnScreen!![0])
-        mWindowLayoutParams.y = getLocationHeight(y.toInt(), locationOnScreen!![1])
+        mWindowLayoutParams.x = getLocationX(x.toInt())
+        mWindowLayoutParams.y = getLocationY(y.toInt())
         mWindowManager?.run {
             updateViewLayout(mDragImageView, mWindowLayoutParams)
         }
     }
 
     private fun createDragImage(bitmap: Bitmap, x: Float, y: Float) {
-        Log.d(TAG, "createDragImage: x:$x, y:$y")
-        val locationOnScreen = getLocationOnScreen(this)
+        Log.d(TAG, "createDragImage: x:$x, y:$y, bitmap.width:${bitmap.width}, bitmap.height:${bitmap.height}")
         mWindowLayoutParams.format = PixelFormat.TRANSLUCENT //支持半透明的格式
         mWindowLayoutParams.gravity = Gravity.TOP or Gravity.LEFT
-        mWindowLayoutParams.x = getLocationWidth(x.toInt(), locationOnScreen!![0])
-        mWindowLayoutParams.y = getLocationHeight(y.toInt(), locationOnScreen!![1])
+        mWindowLayoutParams.x = getLocationX(x.toInt())
+        mWindowLayoutParams.y = getLocationY(y.toInt())
         mWindowLayoutParams.alpha = 80f
         mWindowLayoutParams.width = bitmap.width
         mWindowLayoutParams.height = bitmap.height
@@ -156,17 +159,25 @@ class DragExpandableListView : ExpandableListView {
         }
     }
 
-    private fun getLocationWidth(x: Int, locationX: Int): Int {
-        return ((locationX + x) - 40*0.8).toInt()
+    private fun getLocationX(x: Int): Int {
+        //return ((locationX + x) - dragImageWidth*0.8).toInt()
+        return (getViewX(this) + x - dragImageWidth*0.8).toInt()
     }
-    private fun getLocationHeight(y: Int, locationY: Int): Int {
-        return ((locationY + y) - 160 - 25*0.8).toInt()
+    private fun getLocationY(y: Int): Int {
+        //return ((locationY + y) - BarUtils.getStatusBarHeight() - dragImageHeight*0.8).toInt()
+        return (getViewY(this) + y - BarUtils.getStatusBarHeight()).toInt()
     }
 
-    private fun getLocationOnScreen(view: View): IntArray? {
-        val iArr = IntArray(2)
-        view.getLocationOnScreen(iArr)
-        return iArr
+    private fun getViewX(view: View): Int {
+        val point = IntArray(2)
+        view.getLocationOnScreen(point)
+        return point[0]
+    }
+
+    private fun getViewY(view: View): Int {
+        val point = IntArray(2)
+        view.getLocationOnScreen(point)
+        return point[1]
     }
 
 }
