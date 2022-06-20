@@ -29,10 +29,11 @@ class DragExpandableListView : ExpandableListView {
     private val runnable2 by lazy { object : Runnable {
         override fun run() {
             Log.d(TAG, "runnable2: run:")
-            isDrag = true
+            //parent.requestDisallowInterceptTouchEvent(true)
             mDragBitmap?.let {
                 createDragImage(it, mDownX, mDownY)
             }
+            isDrag = true
         }
     } }
 
@@ -63,35 +64,12 @@ class DragExpandableListView : ExpandableListView {
 
     }
 
-    override fun onTouchEvent(ev: MotionEvent?): Boolean {
-
+    override fun dispatchTouchEvent(ev: MotionEvent?): Boolean {
         ev?.let {
-            Log.d(TAG, "onTouchEvent: action: ${it.action}")
-
             when(it.action) {
                 MotionEvent.ACTION_DOWN -> {
-                    mDownX = ev.x
-                    mDownY = ev.y
-                    val position =  pointToPosition(ev.x.toInt(), ev.y.toInt())
-                    if (position != INVALID_POSITION) {
-                        val view = getChildAt(position - firstVisiblePosition)
-                        view?.let {
-                            lastDownTime = currDownTime
-                            currDownTime = System.currentTimeMillis()
-                            if (currDownTime-lastDownTime >= 300)
-                            {
-                                view.setDrawingCacheEnabled(true);
-                                mDragBitmap = Bitmap.createBitmap(view.drawingCache)
-                                view.destroyDrawingCache()
-                                handler2.postDelayed(runnable2, 300)
-                            }
-                            else
-                            {
-                                this.currDownTime = 0;
-                                this.lastDownTime = 0;
-                            }
-                        }
-                    }
+                    lastDownTime = System.currentTimeMillis()
+                    parent.requestDisallowInterceptTouchEvent(true)
                 }
                 MotionEvent.ACTION_CANCEL,
                 MotionEvent.ACTION_POINTER_UP -> {
@@ -104,6 +82,7 @@ class DragExpandableListView : ExpandableListView {
                     {
                         removeDragImage()
                         isDrag = false
+                        parent.requestDisallowInterceptTouchEvent(false)
                     }
                 }
                 MotionEvent.ACTION_MOVE -> {
@@ -111,18 +90,171 @@ class DragExpandableListView : ExpandableListView {
                     if (isDrag)
                     {
                         onDragItem(it.x, it.y)
+                        return false
                     }
-                    return false
+                    else
+                    {
+                        currDownTime = System.currentTimeMillis()
+                        if (lastDownTime > 0)
+                            Log.d(TAG, "ACTION_DOWN: lastDownTime: $lastDownTime, currDownTime: $currDownTime   diff: ${currDownTime-lastDownTime}")
+                        if (lastDownTime > 0 && currDownTime-lastDownTime >= 200)
+                        {
+                            mDownX = ev.x
+                            mDownY = ev.y
+                            val position =  pointToPosition(ev.x.toInt(), ev.y.toInt())
+                            if (position != INVALID_POSITION) {
+                                val view = getChildAt(position - firstVisiblePosition)
+                                view?.let {
+                                    it.setDrawingCacheEnabled(true);
+                                    mDragBitmap = Bitmap.createBitmap(it.drawingCache)
+                                    it.destroyDrawingCache()
+                                    handler2.postDelayed(runnable2, 200)
+                                }
+                            }
+                        }
+                        else
+                        {
+                            parent.requestDisallowInterceptTouchEvent(false)
+                        }
+
+                        this.currDownTime = 0;
+                        this.lastDownTime = 0;
+                    }
                 }
                 else -> {}
             }
+
         }
 
-        return super.onTouchEvent(ev)
+
+        return super.dispatchTouchEvent(ev)
     }
 
+    /*
+       override fun onTouchEvent(ev: MotionEvent?): Boolean {
+
+           ev?.let {
+               //Log.d(TAG, "onTouchEvent: action: ${it.action}")
+
+               when(it.action) {
+                   MotionEvent.ACTION_DOWN -> {
+                       lastDownTime = System.currentTimeMillis()
+                   }
+                   MotionEvent.ACTION_CANCEL,
+                   MotionEvent.ACTION_POINTER_UP -> {
+                       handler2.removeCallbacks(runnable2)
+                   }
+                   MotionEvent.ACTION_UP -> {
+                       //Log.d(TAG, "onTouchEvent: action: ACTION_UP")
+                       handler2.removeCallbacks(runnable2)
+                       if (isDrag)
+                       {
+                           removeDragImage()
+                           isDrag = false
+                           parent.requestDisallowInterceptTouchEvent(false)
+                       }
+                   }
+                   MotionEvent.ACTION_MOVE -> {
+                       //Log.d(TAG, "onTouchEvent: action: ACTION_MOVE")
+                       if (isDrag)
+                       {
+                           onDragItem(it.x, it.y)
+                           return false
+                       }
+                       else
+                       {
+                           currDownTime = System.currentTimeMillis()
+                           if (lastDownTime > 0)
+                               Log.d(TAG, "ACTION_DOWN: lastDownTime: $lastDownTime, currDownTime: $currDownTime   diff: ${currDownTime-lastDownTime}")
+                           if (lastDownTime > 0 && currDownTime-lastDownTime >= 200)
+                           {
+                               mDownX = ev.x
+                               mDownY = ev.y
+                               val position =  pointToPosition(ev.x.toInt(), ev.y.toInt())
+                               if (position != INVALID_POSITION) {
+                                   val view = getChildAt(position - firstVisiblePosition)
+                                   view?.let {
+                                       it.setDrawingCacheEnabled(true);
+                                       mDragBitmap = Bitmap.createBitmap(it.drawingCache)
+                                       it.destroyDrawingCache()
+                                       handler2.postDelayed(runnable2, 200)
+                                   }
+                               }
+                           }
+
+                           this.currDownTime = 0;
+                           this.lastDownTime = 0;
+                       }
+                   }
+                   else -> {}
+               }
+           }
+
+           return super.onTouchEvent(ev)
+       }
+
+       override fun onTouchEvent(ev: MotionEvent?): Boolean {
+
+           ev?.let {
+               Log.d(TAG, "onTouchEvent: action: ${it.action}")
+
+               when(it.action) {
+                   MotionEvent.ACTION_DOWN -> {
+                       mDownX = ev.x
+                       mDownY = ev.y
+                       val position =  pointToPosition(ev.x.toInt(), ev.y.toInt())
+                       if (position != INVALID_POSITION) {
+                           val view = getChildAt(position - firstVisiblePosition)
+                           view?.let {
+                               lastDownTime = currDownTime
+                               currDownTime = System.currentTimeMillis()
+                               Log.d(TAG, "ACTION_DOWN: lastDownTime: $lastDownTime, currDownTime: $currDownTime")
+                               if (lastDownTime > 0 && currDownTime-lastDownTime >= 300)
+                               {
+                                   view.setDrawingCacheEnabled(true);
+                                   mDragBitmap = Bitmap.createBitmap(view.drawingCache)
+                                   view.destroyDrawingCache()
+                                   handler2.postDelayed(runnable2, 300)
+                               }
+                               else
+                               {
+                                   this.currDownTime = 0;
+                                   this.lastDownTime = 0;
+                               }
+                           }
+                       }
+                   }
+                   MotionEvent.ACTION_CANCEL,
+                   MotionEvent.ACTION_POINTER_UP -> {
+                       handler2.removeCallbacks(runnable2)
+                   }
+                   MotionEvent.ACTION_UP -> {
+                       //Log.d(TAG, "onTouchEvent: action: ACTION_UP")
+                       handler2.removeCallbacks(runnable2)
+                       if (isDrag)
+                       {
+                           removeDragImage()
+                           isDrag = false
+                           parent.requestDisallowInterceptTouchEvent(false)
+                       }
+                   }
+                   MotionEvent.ACTION_MOVE -> {
+                       //Log.d(TAG, "onTouchEvent: action: ACTION_MOVE")
+                       if (isDrag)
+                       {
+                           onDragItem(it.x, it.y)
+                           return false
+                       }
+                   }
+                   else -> {}
+               }
+           }
+
+           return super.onTouchEvent(ev)
+       }
+   */
     private fun onDragItem(x: Float, y: Float) {
-        Log.d(TAG, "onDragItem: x:$x, y:$y")
+        //Log.d(TAG, "onDragItem: x:$x, y:$y")
         mWindowLayoutParams.x = getLocationX(x.toInt())
         mWindowLayoutParams.y = getLocationY(y.toInt())
         mWindowManager?.run {
