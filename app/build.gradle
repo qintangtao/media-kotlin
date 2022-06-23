@@ -108,6 +108,14 @@ android {
 dependencies {
     implementation 'com.github.qintangtao:mvvm-kotlin:1.1.5'
 
+    //implementation 'com.github.qintangtao:binding-collection-adapter:1.0.1'
+    //com.github.qintangtao.binding-collection-adapter:bindingcollectionadapter-expandablelistview:1.0.1
+    //com.github.qintangtao.binding-collection-adapter:bindingcollectionadapter-tagflowlayout:1.0.1
+    //com.github.qintangtao.binding-collection-adapter:bindingcollectionadapter:1.0.1
+
+    implementation 'com.github.qintangtao.binding-collection-adapter:bindingcollectionadapter:1.0.5'
+    implementation 'com.github.qintangtao.binding-collection-adapter:bindingcollectionadapter-expandablelistview:1.0.5'
+
     //xrecyclerview
     api rootProject.ext.dependencies.xrecyclerview
     implementation 'androidx.constraintlayout:constraintlayout:2.0.4'

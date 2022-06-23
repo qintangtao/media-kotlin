@@ -1,0 +1,10 @@
+
+
+1、屏幕密度属性ldpi、mdpi、hdpi、xhdpi、xxhdpi、nodpi、tvdpi
+
+ldpi=120
+mdpi=160
+hdpi=240
+xhdpi=320
+xxhdpi=480
+xxxhdpi=640

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout>
+    <data>
+        <import type="android.view.View"/>
+        <variable
+            name="viewModel"
+            type="com.kotlin.media.ui.group.VideoGroupViewModel" />
+    </data>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".ui.group.VideoGroupFragment">
+
+    <com.kotlin.media.ui.view.DragExpandableListView
+        android:id="@+id/elvVideo"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:groupIndicator="@null"
+        android:divider="@null"
+        android:childDivider="@android:color/transparent"
+        app:groupBinding="@{viewModel.groupBinding}"
+        app:groups="@{viewModel.groups}"
+        app:childBinding="@{viewModel.childBinding}"
+        app:childrens="@{viewModel.childrens}"
+        />
+
+    <TextView
+        android:id="@+id/tvFloatTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingStart="12dp"
+        android:paddingTop="9dp"
+        android:paddingBottom="9dp"
+        android:background="@color/white"
+        android:textColor="@color/black"
+        android:visibility="@{viewModel.groups==null || viewModel.groups.empty ? View.GONE : View.VISIBLE}"
+        android:text="@{viewModel.groups==null || viewModel.groups.empty ? &quot;&quot; : viewModel.groups.get(0) }"
+        tools:text="常用网站" />
+
+</FrameLayout>
+</layout>

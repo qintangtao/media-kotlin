@@ -87,12 +87,7 @@ class DragExpandableListView : ExpandableListView {
                 }
                 MotionEvent.ACTION_MOVE -> {
                     //Log.d(TAG, "onTouchEvent: action: ACTION_MOVE")
-                    if (isDrag)
-                    {
-                        onDragItem(it.x, it.y)
-                        return false
-                    }
-                    else
+                    if (!isDrag)
                     {
                         currDownTime = System.currentTimeMillis()
                         if (lastDownTime > 0)
@@ -128,6 +123,21 @@ class DragExpandableListView : ExpandableListView {
 
 
         return super.dispatchTouchEvent(ev)
+    }
+
+    override fun onTouchEvent(ev: MotionEvent?): Boolean {
+        ev?.let {
+            when(it.action) {
+                MotionEvent.ACTION_MOVE -> {
+                    if (isDrag)
+                    {
+                        onDragItem(it.x, it.y)
+                        return false
+                    }
+                }
+            }
+        }
+        return super.onTouchEvent(ev)
     }
 
     /*

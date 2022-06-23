@@ -1,19 +1,17 @@
-package com.kotlin.media.ui.group
+package com.kotlin.media.ui.player
 
 import android.os.Bundle
-import com.kotlin.media.databinding.ActivityVideoGroupBinding
+import com.kotlin.media.databinding.ActivityVideoPlayerBinding
 import com.kotlin.mvvm.base.BaseActivity
 import com.kotlin.mvvm.base.NoViewModel
 
-class VideoGroupActivity : BaseActivity<NoViewModel, ActivityVideoGroupBinding>() {
-
+class VideoPlayerActivity  : BaseActivity<NoViewModel, ActivityVideoPlayerBinding>() {
 
     override fun initView(savedInstanceState: Bundle?) {
 
     }
 
     override fun initData() {
-
 
     }
 

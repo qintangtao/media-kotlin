@@ -19,7 +19,11 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Mediakotlin">
         <activity
+            android:name=".ui.player.VideoPlayerActivity"
+            android:exported="false" />
+        <activity
             android:name=".ui.group.VideoGroupActivity"
+            android:screenOrientation="sensor"
             android:exported="false" />
         <activity
             android:name=".ui.video.edit.EditActivity"
