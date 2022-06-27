@@ -1,13 +1,17 @@
 package com.kotlin.media.ui.view
 
 import android.content.Context
+import android.graphics.Outline
+import android.graphics.Rect
 import android.graphics.SurfaceTexture
 import android.util.AttributeSet
 import android.util.Log
 import android.view.Surface
 import android.view.TextureView
+import android.view.View
+import android.view.ViewOutlineProvider
+import com.blankj.utilcode.util.SizeUtils
 import com.kotlin.media.DeviceSurface
-import java.time.Duration
 
 class PlayerTextureView  : TextureView, TextureView.SurfaceTextureListener {
 
@@ -29,7 +33,7 @@ class PlayerTextureView  : TextureView, TextureView.SurfaceTextureListener {
         FF_EVENT_NEXT_FRAME(4),         //下一帧
         FF_EVENT_FAST_BACK(5),         //后退
         FF_EVENT_FAST_FORWARD(6);      //快进
-    };
+    }
 
     var mHandler: Long = 0
     var mSurface: Surface? = null
@@ -154,6 +158,9 @@ class PlayerTextureView  : TextureView, TextureView.SurfaceTextureListener {
 
     fun init(context: Context, attrs: AttributeSet?) {
         surfaceTextureListener = this
+
+        setOutlineProvider(TextureViewOutlineProvider(SizeUtils.dp2px(12.0f).toFloat()))
+        setClipToOutline(true);
     }
 
     fun create(surfaceTexture: SurfaceTexture) {
@@ -161,12 +168,12 @@ class PlayerTextureView  : TextureView, TextureView.SurfaceTextureListener {
     }
 
     override fun onSurfaceTextureAvailable(surface: SurfaceTexture, width: Int, height: Int) {
-        Log.d("native-lib", "onSurfaceTextureAvailable")
+        Log.d("native-lib", "onSurfaceTextureAvailable width:$width, height:$height")
         create(surface)
     }
 
     override fun onSurfaceTextureSizeChanged(surface: SurfaceTexture, width: Int, height: Int) {
-        Log.d("native-lib", "onSurfaceTextureSizeChanged")
+        Log.d("native-lib", "onSurfaceTextureSizeChanged width:$width, height:$height")
     }
 
     override fun onSurfaceTextureDestroyed(surface: SurfaceTexture): Boolean {
@@ -179,4 +186,22 @@ class PlayerTextureView  : TextureView, TextureView.SurfaceTextureListener {
         Log.d("native-lib", "onSurfaceTextureUpdated")
     }
 
+
+    class TextureViewOutlineProvider(var radius: Float = 0.0f) : ViewOutlineProvider() {
+        override fun getOutline(view: View?, outline: Outline?) {
+            view?.let {
+                var rect = Rect()
+                it.getGlobalVisibleRect(rect)
+                val leftMargin = 0
+                val topMargin = 0
+                val selfRect = Rect(
+                    leftMargin, topMargin,
+                    rect.right - rect.left - leftMargin, rect.bottom - rect.top - topMargin
+                )
+                outline?.let {
+                    it.setRoundRect(selfRect, this.radius)
+                }
+            }
+        }
+    }
 }
