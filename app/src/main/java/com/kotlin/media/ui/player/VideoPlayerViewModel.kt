@@ -1,9 +1,7 @@
-package com.kotlin.media.ui.video.detail
+package com.kotlin.media.ui.player
 
 import android.util.Log
-import android.view.Gravity
 import android.view.View
-import android.view.WindowManager
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
@@ -22,7 +20,7 @@ import kotlinx.coroutines.launch
 import me.tatarka.bindingcollectionadapter2.ItemBinding
 
 
-class DetailViewModel : BaseViewModel() {
+class VideoPlayerViewModel : BaseViewModel() {
 
     val listenner = object : OnItemClickListener<Video> {
         override fun onClick(view: View, item: Video) {
@@ -105,7 +103,8 @@ class DetailViewModel : BaseViewModel() {
     private val ratev = listOf<Int>(2000, 1750, 1500, 1250, 1000, 500)
 
 
-    fun initData() {
+    fun initData(item : Video) {
+        _itemBean.value = item
         _items.value = rates.toMutableList()
         _rate.value = rates[4]
     }

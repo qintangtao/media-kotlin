@@ -3,14 +3,14 @@
     <data>
         <variable
             name="viewModel"
-            type="com.kotlin.media.ui.video.edit.EditViewModel" />
+            type="com.kotlin.media.ui.edit.EditViewModel" />
     </data>
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".ui.video.edit.EditActivity">
+    tools:context=".ui.edit.EditActivity">
 
     <RelativeLayout
         android:id="@+id/rlBar"

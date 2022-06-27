@@ -3,7 +3,7 @@
     <data>
         <variable
             name="viewModel"
-            type="com.kotlin.media.ui.video.detail.DetailViewModel" />
+            type="com.kotlin.media.ui.player.VideoPlayerViewModel" />
     </data>
 <androidx.recyclerview.widget.RecyclerView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"

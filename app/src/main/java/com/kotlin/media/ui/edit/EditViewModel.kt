@@ -1,12 +1,8 @@
-package com.kotlin.media.ui.video.edit
+package com.kotlin.media.ui.edit
 
 import android.util.Log
 import androidx.lifecycle.MutableLiveData
-import androidx.room.Room
-import com.blankj.utilcode.util.ToastUtils
-import com.blankj.utilcode.util.Utils
 import com.kotlin.media.R
-import com.kotlin.media.data.local.AppDataBase
 import com.kotlin.media.data.local.VideoDao
 import com.kotlin.mvvm.base.BaseViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel

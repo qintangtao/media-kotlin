@@ -26,7 +26,7 @@
             android:screenOrientation="sensor"
             android:exported="false" />
         <activity
-            android:name=".ui.video.edit.EditActivity"
+            android:name=".ui.edit.EditActivity"
             android:exported="false" />
         <activity
             android:name=".ui.video.detail.DetailActivity"

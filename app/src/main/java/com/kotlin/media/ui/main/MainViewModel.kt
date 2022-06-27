@@ -12,10 +12,9 @@ import com.kotlin.mvvm.BR
 import com.kotlin.mvvm.base.BaseViewModel
 import com.kotlin.mvvm.base.OnItemClickListener
 import me.tatarka.bindingcollectionadapter2.ItemBinding
-import com.kotlin.media.DeviceSurface
 import com.kotlin.media.data.local.VideoDao
 import com.kotlin.media.ui.base.OnItemLongClickListener
-import com.kotlin.media.ui.video.detail.DetailActivity
+import com.kotlin.media.ui.player.VideoPlayerActivity
 import com.kotlin.media.ui.view.PlayerTextureView
 import com.kotlin.mvvm.event.Message
 import com.kotlin.mvvm.network.ExceptionHandle
@@ -71,8 +70,8 @@ class MainViewModel @Inject constructor() : BaseViewModel() {
                 R.id.ivDetail ->
                 {
                     view.context.startActivity(Intent().apply {
-                        setClass(view.context, DetailActivity::class.java)
-                        putExtra(DetailActivity.PARAM_VIDEO, item)
+                        setClass(view.context, VideoPlayerActivity::class.java)
+                        putExtra(VideoPlayerActivity.PARAM_VIDEO, item)
                     })
                 }
                 else ->

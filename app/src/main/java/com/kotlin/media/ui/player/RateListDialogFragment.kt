@@ -1,4 +1,4 @@
-package com.kotlin.media.ui.video.detail
+package com.kotlin.media.ui.player
 
 import android.os.Bundle
 import android.util.Log
@@ -22,7 +22,7 @@ import com.kotlin.mvvm.bus.Bus
  *    RateListDialogFragment.newInstance(30).show(supportFragmentManager, "dialog")
  * </pre>
  */
-class RateListDialogFragment: BaseBottomSheetDialogFragment<DetailViewModel, FragmentRateListDialogListDialogBinding>() {
+class RateListDialogFragment: BaseBottomSheetDialogFragment<VideoPlayerViewModel, FragmentRateListDialogListDialogBinding>() {
 
 
     private var _height: Int? = null

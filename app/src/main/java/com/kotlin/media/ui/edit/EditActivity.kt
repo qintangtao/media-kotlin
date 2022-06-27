@@ -1,4 +1,4 @@
-package com.kotlin.media.ui.video.edit
+package com.kotlin.media.ui.edit
 
 import android.os.Bundle
 import android.util.Log
