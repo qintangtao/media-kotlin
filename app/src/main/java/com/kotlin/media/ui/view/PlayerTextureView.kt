@@ -45,7 +45,7 @@ class PlayerTextureView  : TextureView, TextureView.SurfaceTextureListener {
     }
 
     fun start(filename: String) : Boolean{
-        Log.d("native-lib", "start: $filename")
+        Log.d("native-lib", "start: $filename, address:$this")
         mSurface?.let {
             Log.d("native-lib", "start2: $filename")
             mHandler = DeviceSurface.get().ffmpegOpen(filename, mSurface!!)
@@ -168,7 +168,7 @@ class PlayerTextureView  : TextureView, TextureView.SurfaceTextureListener {
     }
 
     override fun onSurfaceTextureAvailable(surface: SurfaceTexture, width: Int, height: Int) {
-        Log.d("native-lib", "onSurfaceTextureAvailable width:$width, height:$height")
+        Log.d("native-lib", "onSurfaceTextureAvailable width:$width, height:$height, address:$this")
         create(surface)
     }
 
@@ -177,7 +177,7 @@ class PlayerTextureView  : TextureView, TextureView.SurfaceTextureListener {
     }
 
     override fun onSurfaceTextureDestroyed(surface: SurfaceTexture): Boolean {
-        Log.d("native-lib", "onSurfaceTextureDestroyed")
+        Log.d("native-lib", "onSurfaceTextureDestroyed, address:$this")
         stop()
         return true
     }

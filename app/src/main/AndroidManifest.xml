@@ -29,9 +29,6 @@
             android:name=".ui.edit.EditActivity"
             android:exported="false" />
         <activity
-            android:name=".ui.video.detail.DetailActivity"
-            android:exported="false" />
-        <activity
             android:name=".ui.main.MainActivity"
             android:exported="true">
 

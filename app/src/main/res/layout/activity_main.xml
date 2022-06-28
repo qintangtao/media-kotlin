@@ -51,14 +51,19 @@
 
     </com.google.android.material.appbar.AppBarLayout>
 
-    <com.jcodecraeer.xrecyclerview.XRecyclerView
+    <!--
+    com.jcodecraeer.xrecyclerview.XRecyclerView
+    -->
+    <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         app:layout_behavior="@string/appbar_scrolling_view_behavior"
         app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
         app:itemBinding="@{viewModel.itemBinding}"
-        app:items="@{viewModel.items}"/>
+        app:items="@{viewModel.items}"
+        app:adapter="@{viewModel.adapter}"
+        app:diffConfig="@{viewModel.diff}"/>
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
 </layout>

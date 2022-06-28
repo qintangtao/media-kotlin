@@ -6,8 +6,7 @@ import android.content.pm.PackageManager
 import android.os.Bundle
 import android.util.Log
 import androidx.core.app.ActivityCompat
-import com.jcodecraeer.xrecyclerview.ProgressStyle
-import com.jcodecraeer.xrecyclerview.XRecyclerView
+import com.kotlin.media.R
 import com.kotlin.media.databinding.ActivityMainBinding
 import com.kotlin.media.ui.group.VideoGroupActivity
 import com.kotlin.mvvm.base.BaseActivity
@@ -22,6 +21,7 @@ class MainActivity : BaseActivity<MainViewModel, ActivityMainBinding>() {
         mBinding.viewModel = viewModel
 
         mBinding.run {
+            /*
             recyclerView.run {
                 setPullRefreshEnabled(false)
                 setLoadingMoreEnabled(false)
@@ -34,7 +34,11 @@ class MainActivity : BaseActivity<MainViewModel, ActivityMainBinding>() {
 
                     }
                 })
-            }
+            }*/
+
+            // 不复用item
+            //recyclerView.recycledViewPool.setMaxRecycledViews(R.layout.item_video_player, 4)
+            //recyclerView.setItemViewCacheSize(0)
         }
 
         //mBinding.ivAdd.setOnClickListener { startActivity(Intent(this, EditActivity::class.java))  }

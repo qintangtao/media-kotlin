@@ -110,7 +110,7 @@ class VideoPlayerFragment : BaseFragment<VideoPlayerViewModel, FragmentVideoPlay
     }
 
     fun setVolume(percent: Int) {
-        var volume_level  = 0
+        var volume_level: Int
         if (percent > 30) {
             volume_level = (100 - percent) * -20
         } else if (percent > 25) {

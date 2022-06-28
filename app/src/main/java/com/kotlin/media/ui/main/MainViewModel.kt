@@ -6,6 +6,9 @@ import android.view.View
 import androidx.appcompat.app.AlertDialog
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import androidx.recyclerview.widget.AsyncListDiffer
+import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.RecyclerView
 import com.kotlin.media.R
 import com.kotlin.media.model.bean.Video
 import com.kotlin.mvvm.BR
@@ -31,9 +34,8 @@ class MainViewModel @Inject constructor() : BaseViewModel() {
     @Inject
     lateinit var videoDao: VideoDao
 
-
     private val onItemLongClickListener = object : OnItemLongClickListener<Video> {
-        override fun onClick(view: View, item: Video) : Boolean {
+        override fun onClick(view: View, item: Video): Boolean {
             Log.d("EditViewModel", "MainViewModel.onLongClick:" + view)
             AlertDialog.Builder(view.context)
                 .setMessage(R.string.confirm_delete)
@@ -51,31 +53,35 @@ class MainViewModel @Inject constructor() : BaseViewModel() {
     private val onItemClickListener = object : OnItemClickListener<Video> {
         override fun onClick(view: View, item: Video) {
 
-            when(view.id) {
-                R.id.ivPlay ->
-                {
-                    var ptvPlayer = (view.parent as View).findViewById<PlayerTextureView>(R.id.ptv_player)
+            when (view.id) {
+                R.id.ivPlay -> {
+                    var ptvPlayer =
+                        (view.parent as View).findViewById<PlayerTextureView>(R.id.ptv_player)
                     ptvPlayer?.let {
                         if (!item.play) ptvPlayer.start(item.url) else ptvPlayer.stop()
-                        item.play = !item.play
                     }
 
-                    //_items.value = _items.value!!.toMutableList()
+                    val index = _items.value!!.indexOf(item)
+                    //Log.d("EditViewModel", "item: $item, index: $index")
+                    check(index > -1) { "not found $item from list" }
 
-                    //if (item.play)
-                    //    DeviceSurface.get().closeFfmpeg()
-                    //else
-                    //    DeviceSurface.get().openFfmpeg(item.url)
+                    //Log.d("EditViewModel", "1 _items.value: ${_items.value}")
+
+                    _items.value  = _items.value!!.toMutableList().apply {
+                        removeAt(index)
+                        add(index,  item.copy(play = !item.play))
+                    }
+
+
+                    //Log.d("EditViewModel", "4 _items.value: ${_items.value}")
                 }
-                R.id.ivDetail ->
-                {
+                R.id.ivDetail -> {
                     view.context.startActivity(Intent().apply {
                         setClass(view.context, VideoPlayerActivity::class.java)
                         putExtra(VideoPlayerActivity.PARAM_VIDEO, item)
                     })
                 }
-                else ->
-                {
+                else -> {
                     Log.d("EditViewModel", "MainViewModel.onClick:" + view)
                 }
             }
@@ -83,12 +89,28 @@ class MainViewModel @Inject constructor() : BaseViewModel() {
     }
 
     private val _items = MutableLiveData<MutableList<Video>>()
-
     val items: LiveData<MutableList<Video>> = _items
 
-    val itemBinding = ItemBinding.of<Video>(BR.itemBean, R.layout.item_video)
+    val itemBinding = ItemBinding.of<Video>(BR.itemBean, R.layout.item_video_player)
         .bindExtra(BR.listenner, onItemClickListener)
         .bindExtra(BR.listenner2, onItemLongClickListener)
+
+    val adapter = MyBindingRecyclerViewAdapter<Video>()
+
+    val diff: DiffUtil.ItemCallback<Video> = object : DiffUtil.ItemCallback<Video>() {
+        override fun areItemsTheSame(oldItem: Video, newItem: Video): Boolean {
+            //Log.d("EditViewModel", "areItemsTheSame oldItem:$oldItem")
+            //Log.d("EditViewModel", "areItemsTheSame newItem:$newItem")
+            return oldItem.id == newItem.id
+        }
+
+        override fun areContentsTheSame(oldItem: Video, newItem: Video): Boolean {
+            Log.d("EditViewModel", "areContentsTheSame oldItem:$oldItem")
+            Log.d("EditViewModel", "areContentsTheSame newItem:$newItem")
+            return oldItem.play == newItem.play
+        }
+
+    }
 
     fun refreshVideoList() {
         /* _items.value = listOf<Video>(
@@ -110,15 +132,15 @@ class MainViewModel @Inject constructor() : BaseViewModel() {
             launchFlow {
                 videoDao.getAllVideos()
             }
-            .flowOn(Dispatchers.IO)
-            .catch {
-                val e = ExceptionHandle.handleException(it)
-                callError(Message(e.code, e.msg))
-            }
-            .collect {
-                _items.value = it
-                callResult(RESULT.SUCCESS.code)
-            }
+                .flowOn(Dispatchers.IO)
+                .catch {
+                    val e = ExceptionHandle.handleException(it)
+                    callError(Message(e.code, e.msg))
+                }
+                .collect {
+                    _items.value = it
+                    callResult(RESULT.SUCCESS.code)
+                }
         }
     }
 
@@ -130,16 +152,16 @@ class MainViewModel @Inject constructor() : BaseViewModel() {
             launchFlow {
                 videoDao.delete(item)
             }
-            .flowOn(Dispatchers.IO)
-            .catch {
-                val e = ExceptionHandle.handleException(it)
-                callError(Message(e.code, e.msg))
-            }
-            .collect {
-                Log.d("EditViewModel", "MainViewModel.deleteVideoList.result:" + it)
-                refreshVideoList()
-                callResult(RESULT.SUCCESS.code)
-            }
+                .flowOn(Dispatchers.IO)
+                .catch {
+                    val e = ExceptionHandle.handleException(it)
+                    callError(Message(e.code, e.msg))
+                }
+                .collect {
+                    Log.d("EditViewModel", "MainViewModel.deleteVideoList.result:" + it)
+                    refreshVideoList()
+                    callResult(RESULT.SUCCESS.code)
+                }
         }
     }
 
