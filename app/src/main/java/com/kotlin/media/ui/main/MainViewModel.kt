@@ -1,14 +1,11 @@
 package com.kotlin.media.ui.main
 
-import android.content.Intent
 import android.util.Log
 import android.view.View
 import androidx.appcompat.app.AlertDialog
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import androidx.recyclerview.widget.AsyncListDiffer
 import androidx.recyclerview.widget.DiffUtil
-import androidx.recyclerview.widget.RecyclerView
 import com.kotlin.media.R
 import com.kotlin.media.model.bean.Video
 import com.kotlin.mvvm.BR
@@ -17,8 +14,7 @@ import com.kotlin.mvvm.base.OnItemClickListener
 import me.tatarka.bindingcollectionadapter2.ItemBinding
 import com.kotlin.media.data.local.VideoDao
 import com.kotlin.media.ui.base.OnItemLongClickListener
-import com.kotlin.media.ui.player.VideoPlayerActivity
-import com.kotlin.media.ui.view.PlayerTextureView
+import me.tang.videoplayerview.PlayerTextureView
 import com.kotlin.mvvm.event.Message
 import com.kotlin.mvvm.network.ExceptionHandle
 import com.kotlin.mvvm.network.RESULT
@@ -56,7 +52,7 @@ class MainViewModel @Inject constructor() : BaseViewModel() {
             when (view.id) {
                 R.id.ivPlay -> {
                     var ptvPlayer =
-                        (view.parent as View).findViewById<PlayerTextureView>(R.id.ptv_player)
+                        (view.parent as View).findViewById<me.tang.videoplayerview.PlayerTextureView>(R.id.ptv_player)
                     ptvPlayer?.let {
                         if (!item.play) ptvPlayer.start(item.url) else ptvPlayer.stop()
                     }
@@ -75,12 +71,12 @@ class MainViewModel @Inject constructor() : BaseViewModel() {
 
                     //Log.d("EditViewModel", "4 _items.value: ${_items.value}")
                 }
-                R.id.ivDetail -> {
-                    view.context.startActivity(Intent().apply {
-                        setClass(view.context, VideoPlayerActivity::class.java)
-                        putExtra(VideoPlayerActivity.PARAM_VIDEO, item)
-                    })
-                }
+                //R.id.ivDetail -> {
+                //    view.context.startActivity(Intent().apply {
+                //        setClass(view.context, VideoPlayerActivity::class.java)
+                //        putExtra(VideoPlayerActivity.PARAM_VIDEO, item)
+                //    })
+               // }
                 else -> {
                     Log.d("EditViewModel", "MainViewModel.onClick:" + view)
                 }

@@ -12,6 +12,20 @@
             name="listenner2"
             type="com.kotlin.media.ui.base.OnItemLongClickListener" />
     </data>
+    <me.tang.videoplayerview.VideoPlayerView xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:app="http://schemas.android.com/apk/res-auto"
+        android:layout_width="match_parent"
+        android:layout_height="230dp"
+        android:padding="9dp"
+        android:onLongClick="@{(view)->listenner2.onClick(view, itemBean)}"
+        app:foreground_background="@drawable/shape_bg_video"
+        app:play_background="@drawable/ic_chevron_right_black_24dp"
+        app:text="@{itemBean.name}"
+        app:text_appearance="@style/VideoPlayerView_text"
+        app:filename="@{itemBean.url}"/>
+
+    <!--
+
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
@@ -19,7 +33,7 @@
     android:padding="9dp"
     android:onLongClick="@{(view)->listenner2.onClick(view, itemBean)}">
 
-    <com.kotlin.media.ui.view.PlayerTextureView
+    <me.tang.videoplayerview.PlayerTextureView
         android:id="@+id/ptv_player"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -29,7 +43,7 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
         />
-    <!---->
+
     <View
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -77,5 +91,5 @@
         app:layout_constraintTop_toTopOf="parent" />
 
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>-->
 </layout>

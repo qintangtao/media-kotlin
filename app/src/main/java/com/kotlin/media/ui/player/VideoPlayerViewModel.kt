@@ -7,7 +7,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import com.kotlin.media.R
 import com.kotlin.media.model.bean.Video
-import com.kotlin.media.ui.view.PlayerTextureView
+import me.tang.videoplayerview.PlayerTextureView
 import com.kotlin.mvvm.BR
 import com.kotlin.mvvm.base.BaseViewModel
 import com.kotlin.mvvm.base.OnItemClickListener
@@ -26,7 +26,7 @@ class VideoPlayerViewModel : BaseViewModel() {
         override fun onClick(view: View, item: Video) {
             when(view.id) {
                 R.id.ivPlay -> {
-                    var ptvPlayer = (view.parent as View).findViewById<PlayerTextureView>(R.id.ptv_player)
+                    var ptvPlayer = (view.parent as View).findViewById<me.tang.videoplayerview.PlayerTextureView>(R.id.ptv_player)
 
                     Log.d("native-lib", "DetailViewModel.ivPlay: " + ptvPlayer)
 
@@ -41,7 +41,7 @@ class VideoPlayerViewModel : BaseViewModel() {
                     }
                 }
                 R.id.ivPaused -> {
-                    var ptvPlayer = (view.parent as View).findViewById<PlayerTextureView>(R.id.ptv_player)
+                    var ptvPlayer = (view.parent as View).findViewById<me.tang.videoplayerview.PlayerTextureView>(R.id.ptv_player)
 
                     Log.d("native-lib", "DetailViewModel.ivPaused: " + ptvPlayer)
 
@@ -51,7 +51,7 @@ class VideoPlayerViewModel : BaseViewModel() {
                     }
                 }
                 R.id.ivMute -> {
-                    var ptvPlayer = (view.parent as View).findViewById<PlayerTextureView>(R.id.ptv_player)
+                    var ptvPlayer = (view.parent as View).findViewById<me.tang.videoplayerview.PlayerTextureView>(R.id.ptv_player)
 
                     Log.d("native-lib", "DetailViewModel.ivPaused: " + ptvPlayer)
 
@@ -113,7 +113,7 @@ class VideoPlayerViewModel : BaseViewModel() {
         isRefreshDurationPaused = paused
     }
 
-    fun refreshDuration(ptvPlayer: PlayerTextureView) {
+    fun refreshDuration(ptvPlayer: me.tang.videoplayerview.PlayerTextureView) {
         isRefreshDurationExit = false
         isRefreshDurationPaused = false
         viewModelScope.launch {

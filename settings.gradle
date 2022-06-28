@@ -16,3 +16,5 @@ dependencyResolutionManagement {
 }
 rootProject.name = "media-kotlin"
 include ':app'
+include ':VideoPlayerView'
+include ':ffplay'

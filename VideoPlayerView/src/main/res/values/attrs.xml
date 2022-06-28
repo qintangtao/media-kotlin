@@ -1,0 +1,14 @@
+<resources>
+
+    <declare-styleable name="VideoPlayerView">
+        <attr name="foreground_background" format="reference" />
+        <attr name="play_background" format="reference" />
+
+        <attr name="text_appearance" format="reference" />
+
+        <attr name="text" format="string" />
+        <attr name="filename" format="string" />
+    </declare-styleable>
+
+
+</resources>

@@ -22,7 +22,7 @@
         app:layout_constraintRight_toRightOf="parent"
         app:layout_constraintTop_toTopOf="parent">
 
-        <com.kotlin.media.ui.view.PlayerTextureView
+        <me.tang.videoplayerview.PlayerTextureView
             android:id="@+id/ptv_player"
             android:layout_width="match_parent"
             android:layout_height="match_parent"

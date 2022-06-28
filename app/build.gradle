@@ -19,15 +19,7 @@ android {
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
-        externalNativeBuild {
-            cmake {
-                //-Wall  -UNDEBUG
-                cppFlags "-std=c++11"
-                arguments '-DANDROID_PLATFORM=android-29',
-                        '-DANDROID_STL=c++_static'
-                abiFilters "armeabi-v7a", "x86", "x86_64", "arm64-v8a"
-            }
-        }
+
     }
 
     buildTypes {
@@ -47,58 +39,9 @@ android {
         dataBinding true
         viewBinding true
     }
-    externalNativeBuild {
-        cmake {
-            path "src/main/cpp/CMakeLists.txt"
-            version "3.18.1"
-        }
-    }
-
-    sourceSets {
-        main {
-            jniLibs.srcDirs = ['src/main/cpp/libyuv/libs', 'src/main/cpp/libffmpeg/libs']
-        }
-    }
-
-    /**/
-    packagingOptions {
-        pickFirst 'lib/arm64-v8a/libyuv.so'
-        pickFirst 'lib/armeabi-v7a/libyuv.so'
-        pickFirst 'lib/x86/libyuv.so'
-        pickFirst 'lib/x86_64/libyuv.so'
-
-        //pickFirst 'lib/arm64-v8a/libffmpeg.so'
-        //pickFirst 'lib/armeabi-v7a/libffmpeg.so'
-        //pickFirst 'lib/x86/libffmpeg.so'
-        //pickFirst 'lib/x86_64/libffmpeg.so'
-
-        pickFirst 'lib/arm64-v8a/libavutil.so'
-        pickFirst 'lib/armeabi-v7a/libavutil.so'
-        pickFirst 'lib/x86/libavutil.so'
-        pickFirst 'lib/x86_64/libavutil.so'
-
-        pickFirst 'lib/arm64-v8a/libavcodec.so'
-        pickFirst 'lib/armeabi-v7a/libavcodec.so'
-        pickFirst 'lib/x86/libavcodec.so'
-        pickFirst 'lib/x86_64/libavcodec.so'
-
-        pickFirst 'lib/arm64-v8a/libavformat.so'
-        pickFirst 'lib/armeabi-v7a/libavformat.so'
-        pickFirst 'lib/x86/libavformat.so'
-        pickFirst 'lib/x86_64/libavformat.so'
-
-        pickFirst 'lib/arm64-v8a/libswscale.so'
-        pickFirst 'lib/armeabi-v7a/libswscale.so'
-        pickFirst 'lib/x86/libswscale.so'
-        pickFirst 'lib/x86_64/libswscale.so'
-
-        pickFirst 'lib/arm64-v8a/libswresample.so'
-        pickFirst 'lib/armeabi-v7a/libswresample.so'
-        pickFirst 'lib/x86/libswresample.so'
-        pickFirst 'lib/x86_64/libswresample.so'
 
 
-    }
+
     configurations.all() {
         resolutionStrategy.force "org.antlr:antlr4-runtime:4.5.3"
         resolutionStrategy.force "org.antlr:antlr4-tool:4.5.3"
@@ -107,6 +50,8 @@ android {
 
 dependencies {
     implementation 'com.github.qintangtao:mvvm-kotlin:1.1.5'
+
+    implementation project(path: ':VideoPlayerView')
 
     //implementation 'com.github.qintangtao:binding-collection-adapter:1.0.1'
     //com.github.qintangtao.binding-collection-adapter:bindingcollectionadapter-expandablelistview:1.0.1

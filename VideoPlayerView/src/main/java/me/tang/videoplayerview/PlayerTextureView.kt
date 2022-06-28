@@ -1,4 +1,4 @@
-package com.kotlin.media.ui.view
+package me.tang.videoplayerview
 
 import android.content.Context
 import android.graphics.Outline
@@ -11,7 +11,7 @@ import android.view.TextureView
 import android.view.View
 import android.view.ViewOutlineProvider
 import com.blankj.utilcode.util.SizeUtils
-import com.kotlin.media.DeviceSurface
+import me.tang.ffplay.DeviceSurface
 
 class PlayerTextureView  : TextureView, TextureView.SurfaceTextureListener {
 
@@ -43,6 +43,8 @@ class PlayerTextureView  : TextureView, TextureView.SurfaceTextureListener {
     constructor(context: Context, attrs: AttributeSet?, defStyleAttr: Int): super(context, attrs, defStyleAttr) {
         init(context, attrs)
     }
+
+    fun isPlaying() : Boolean = mHandler.compareTo(0) != 0
 
     fun start(filename: String) : Boolean{
         Log.d("native-lib", "start: $filename, address:$this")
