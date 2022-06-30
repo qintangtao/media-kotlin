@@ -10,39 +10,62 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.constraintlayout.widget.ConstraintLayout
 import com.blankj.utilcode.util.SizeUtils
+import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.*
 
 class VideoPlayerView : ConstraintLayout {
 
     private val radius: Float = 12.0F
 
-    private var _filename: String? = null
-    private val filename get() = _filename!!
+    private var _url: String? = null
+    private val url get() = _url!!
 
-    lateinit var playerTextureView: PlayerTextureView
-    lateinit var foregroundView: View
-    lateinit var nameTextView: TextView
-    lateinit var playImageView: ImageView
+    private lateinit var playerTextureView: PlayerTextureView
+    private lateinit var foregroundView: View
+    private lateinit var nameTextView: TextView
+    private lateinit var playImageView: ImageView
 
-    constructor(context: Context): this(context, null)
-    constructor(context: Context, attrs: AttributeSet?): this(context, attrs, 0)
-    constructor(context: Context, attrs: AttributeSet?, defStyleAttr: Int): this(context, attrs, defStyleAttr, 0)
-    constructor(context: Context, attrs: AttributeSet?, defStyleAttr: Int, defStyleRes: Int): super(context, attrs, defStyleAttr, defStyleRes) {
+    private val mainScope = MainScope()
 
+    private var floatVisibility = View.VISIBLE
+
+
+    constructor(context: Context) : this(context, null)
+    constructor(context: Context, attrs: AttributeSet?) : this(context, attrs, 0)
+    constructor(context: Context, attrs: AttributeSet?, defStyleAttr: Int) : this(
+        context,
+        attrs,
+        defStyleAttr,
+        0
+    )
+
+    constructor(
+        context: Context,
+        attrs: AttributeSet?,
+        defStyleAttr: Int,
+        defStyleRes: Int
+    ) : super(context, attrs, defStyleAttr, defStyleRes) {
         init(context, attrs, defStyleAttr, defStyleRes)
-
     }
 
     fun setText(text: String) {
         nameTextView.setText(text)
     }
 
-    fun setFilename(filename: String) {
-        _filename = filename
+    fun setUrl(url: String) {
+        _url = url
     }
 
+    fun setForegroundVisibility(visibility: Int) {
+        foregroundView.visibility = visibility
+    }
 
-    private fun init(context: Context, attrs: AttributeSet?, defStyleAttr: Int, defStyleRes: Int)
-    {
+    fun setPlayVisibility(visibility: Int) {
+        playImageView.visibility = visibility
+    }
+
+    private fun init(context: Context, attrs: AttributeSet?, defStyleAttr: Int, defStyleRes: Int) {
         val a: TypedArray = context.obtainStyledAttributes(attrs, R.styleable.VideoPlayerView)
 
         playerTextureView = PlayerTextureView(context).apply {
@@ -70,14 +93,28 @@ class VideoPlayerView : ConstraintLayout {
                 bottomToBottom = LayoutParams.PARENT_ID
                 //circleRadius = SizeUtils.dp2px(radius)
                 alpha = 0.8f
-                background = a.getDrawable(R.styleable.VideoPlayerView_foreground_background)// ?: a.getDrawable(R.drawable.shape_bg_video)
+                background =
+                    a.getDrawable(R.styleable.VideoPlayerView_foreground_background)// ?: a.getDrawable(R.drawable.shape_bg_video)
             }
         }
         addView(foregroundView)
 
-        Log.d("EditViewModel", "id:${R.style.VideoPlayerView_text}, newID:${a.getResourceId(R.styleable.VideoPlayerView_text_appearance, 0)}")
+        Log.d(
+            "EditViewModel",
+            "id:${R.style.VideoPlayerView_text}, newID:${
+                a.getResourceId(
+                    R.styleable.VideoPlayerView_text_appearance,
+                    0
+                )
+            }"
+        )
 
-        nameTextView = TextView(context, null, 0, a.getResourceId(R.styleable.VideoPlayerView_text_appearance, 0)).apply {
+        nameTextView = TextView(
+            context,
+            null,
+            0,
+            a.getResourceId(R.styleable.VideoPlayerView_text_appearance, 0)
+        ).apply {
             layoutParams = ConstraintLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
@@ -106,15 +143,40 @@ class VideoPlayerView : ConstraintLayout {
             }
             background = a.getDrawable(R.styleable.VideoPlayerView_play_background)
             setOnClickListener {
-                if (playerTextureView.isPlaying())
+                if (playerTextureView.isPlaying()) {
                     playerTextureView.stop()
-                else
-                    playerTextureView.start(filename)
+                    setForegroundVisibility(View.VISIBLE)
+                    setFloatVisibility(View.VISIBLE)
+                } else {
+                    playerTextureView.start(url)
+                    setForegroundVisibility(View.GONE)
+                    setFloatVisibility(View.GONE)
+                }
             }
         }
         addView(playImageView)
 
         a.recycle()
+
+        clickFlow()
+            .filter {
+                Log.d("EditViewModel", "click 1")
+                if (playerTextureView.isPlaying()) {
+                    if (playImageView.visibility == View.GONE) {
+                        setFloatVisibility(View.VISIBLE)
+                        return@filter true
+                    }
+                    setFloatVisibility(View.GONE)
+                }
+                return@filter false
+            }
+            .debounce(3000)
+            .onEach {
+                Log.d("EditViewModel", "click 2")
+                if (playerTextureView.isPlaying())
+                    setFloatVisibility(View.GONE)
+            }
+            .launchIn(mainScope)
 
         /*
         <me.tang.videoplayerview.PlayerTextureView
@@ -174,5 +236,34 @@ class VideoPlayerView : ConstraintLayout {
         app:layout_constraintRight_toRightOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
         * */
+    }
+
+    private fun setFloatVisibility(visibility: Int) {
+        if (floatVisibility == visibility)
+            return
+
+        floatVisibility = visibility
+
+        playImageView.visibility = visibility
+        nameTextView.visibility = visibility
+    }
+}
+
+fun View.clickFlow() = callbackFlow {
+    setOnClickListener { offer(Unit) }
+    awaitClose { setOnClickListener(null) }
+}
+
+fun <T> Flow<T>.throttleFirst(thresholdMillis: Long): Flow<T> = flow {
+    var lastTime = 0L // 上次发射数据的时间
+    // 收集数据
+    collect { upstream ->
+        // 当前时间
+        val currentTime = System.currentTimeMillis()
+        // 时间差超过阈值则发送数据并记录时间
+        if (currentTime - lastTime > thresholdMillis) {
+            lastTime = currentTime
+            emit(upstream)
+        }
     }
 }

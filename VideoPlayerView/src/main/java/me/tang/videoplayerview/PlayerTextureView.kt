@@ -11,7 +11,8 @@ import android.view.TextureView
 import android.view.View
 import android.view.ViewOutlineProvider
 import com.blankj.utilcode.util.SizeUtils
-import me.tang.ffplay.DeviceSurface
+import me.tang.ffplay.FFEvent
+import me.tang.ffplay.FFplay
 
 class PlayerTextureView  : TextureView, TextureView.SurfaceTextureListener {
 
@@ -25,18 +26,9 @@ class PlayerTextureView  : TextureView, TextureView.SurfaceTextureListener {
         ClosingState(5, "关闭中");
     }
 
-    enum class ffEvent(val code: Long){
-        FF_EVENT_TOOGLE_PAUSE(0),      //暂停
-        FF_EVENT_TOOGLE_MUTE(1),       //静音
-        FF_EVENT_INC_VOLUME(2),        //静音加
-        FF_EVENT_DEC_VOLUME(3),        //静音减
-        FF_EVENT_NEXT_FRAME(4),         //下一帧
-        FF_EVENT_FAST_BACK(5),         //后退
-        FF_EVENT_FAST_FORWARD(6);      //快进
-    }
-
-    var mHandler: Long = 0
-    var mSurface: Surface? = null
+    private val TAG = PlayerTextureView::class.java.name
+    private var mHandler: Long = 0
+    private var mSurface: Surface? = null
 
     constructor(context: Context): this(context, null)
     constructor(context: Context, attrs: AttributeSet?): this(context, attrs, 0)
@@ -47,104 +39,97 @@ class PlayerTextureView  : TextureView, TextureView.SurfaceTextureListener {
     fun isPlaying() : Boolean = mHandler.compareTo(0) != 0
 
     fun start(filename: String) : Boolean{
-        Log.d("native-lib", "start: $filename, address:$this")
+        Log.d("TAG", "start: $filename, address:$this")
         mSurface?.let {
-            Log.d("native-lib", "start2: $filename")
-            mHandler = DeviceSurface.get().ffmpegOpen(filename, mSurface!!)
-            Log.d("native-lib", "start3: $filename mHandler: $mHandler")
+            mHandler = FFplay.get().open(filename, mSurface!!)
             return true
         }
         return false
     }
 
     fun stop() {
-        Log.d("native-lib", "stop: $mHandler")
+        Log.d("TAG", "stop: $mHandler")
         if (mHandler.compareTo(0) != 0) {
-            Log.d("native-lib", "stop2: $mHandler")
-            DeviceSurface.get().ffmpegClose(mHandler)
+            FFplay.get().close(mHandler)
             mHandler = 0
         }
     }
 
     fun tooglePause() {
-        Log.d("native-lib", "tooglePause: $mHandler")
+        Log.d("TAG", "tooglePause: $mHandler")
         if (mHandler.compareTo(0) != 0) {
-            DeviceSurface.get().ffmpegSendEvent(mHandler, ffEvent.FF_EVENT_TOOGLE_PAUSE.code)
+            FFplay.get().sendEvent(mHandler, FFEvent.FF_EVENT_TOOGLE_PAUSE.code)
         }
     }
 
     fun toogleMute() {
-        Log.d("native-lib", "toogleMute: $mHandler")
+        Log.d("TAG", "toogleMute: $mHandler")
         if (mHandler.compareTo(0) != 0) {
-            DeviceSurface.get().ffmpegSendEvent(mHandler, ffEvent.FF_EVENT_TOOGLE_MUTE.code)
+            FFplay.get().sendEvent(mHandler, FFEvent.FF_EVENT_TOOGLE_MUTE.code)
         }
     }
 
     fun fastBack() {
-        Log.d("native-lib", "fastBack: $mHandler")
+        Log.d("TAG", "fastBack: $mHandler")
         if (mHandler.compareTo(0) != 0) {
-            DeviceSurface.get().ffmpegSendEvent(mHandler, ffEvent.FF_EVENT_FAST_BACK.code)
+            FFplay.get().sendEvent(mHandler, FFEvent.FF_EVENT_FAST_BACK.code)
         }
     }
 
     fun fastForward() {
-        Log.d("native-lib", "fastFoward: $mHandler")
+        Log.d("TAG", "fastFoward: $mHandler")
         if (mHandler.compareTo(0) != 0) {
-            DeviceSurface.get().ffmpegSendEvent(mHandler, ffEvent.FF_EVENT_FAST_FORWARD.code)
+            FFplay.get().sendEvent(mHandler, FFEvent.FF_EVENT_FAST_FORWARD.code)
         }
     }
 
     fun setVolume(volume: Int) {
-        Log.d("native-lib", "setVolume: $mHandler $volume")
+        Log.d("TAG", "setVolume: $mHandler $volume")
         if (mHandler.compareTo(0) != 0) {
-            DeviceSurface.get().ffmpegSetVolume(mHandler, volume.toLong())
+            FFplay.get().setVolume(mHandler, volume.toLong())
         }
     }
 
     fun getDuration() : Long {
-        Log.d("native-lib", "getDuration: $mHandler")
+        Log.d("TAG", "getDuration: $mHandler")
         if (mHandler.compareTo(0) != 0) {
-            return DeviceSurface.get().ffmpegDuration(mHandler)
+            return FFplay.get().duration(mHandler)
         }
         return 0
     }
 
     fun getCurrentDuration() : Long {
-        Log.d("native-lib", "getCurrentDuration: $mHandler")
+        Log.d("TAG", "getCurrentDuration: $mHandler")
         if (mHandler.compareTo(0) != 0) {
-            return DeviceSurface.get().ffmpegCurrentDuration(mHandler)
+            return FFplay.get().currentDuration(mHandler)
         }
         return 0
     }
 
     fun seek(pos: Long) {
-        Log.d("native-lib", "seek: $mHandler $pos")
+        Log.d("TAG", "seek: $mHandler $pos")
         if (mHandler.compareTo(0) != 0) {
-            DeviceSurface.get().ffmpegSeek(mHandler, pos)
+            FFplay.get().seek(mHandler, pos)
         }
     }
 
     fun setRate(rate: Int) {
-        Log.d("native-lib", "setRate: $mHandler $rate")
+        Log.d("TAG", "setRate: $mHandler $rate")
         if (mHandler.compareTo(0) != 0) {
-            DeviceSurface.get().ffmpegSetRate(mHandler, rate)
+            FFplay.get().setRate(mHandler, rate)
         }
     }
 
     fun formatDuration(duration: Long) : String {
         val AV_TIME_BASE = 1000000
-        var hours: Int
         var mins: Int
-        var secs: Int
-        var us: Int
-        var msecs: Int
-        secs  = (duration / AV_TIME_BASE).toInt()
-        us    = (duration % AV_TIME_BASE).toInt()
+        var secs: Int = (duration / AV_TIME_BASE).toInt()
+        val us: Int = (duration % AV_TIME_BASE).toInt()
         mins  = secs / 60
         secs %= 60
-        hours = mins / 60
+        val hours = mins / 60
         mins %= 60
-        msecs = (100 * us) / AV_TIME_BASE
+        val msecs = (100 * us) / AV_TIME_BASE
 
         val _hours = String.format("%02d", hours)
         val _mins = String.format("%02d", mins)
@@ -160,9 +145,8 @@ class PlayerTextureView  : TextureView, TextureView.SurfaceTextureListener {
 
     fun init(context: Context, attrs: AttributeSet?) {
         surfaceTextureListener = this
-
-        setOutlineProvider(TextureViewOutlineProvider(SizeUtils.dp2px(12.0f).toFloat()))
-        setClipToOutline(true);
+        outlineProvider = TextureViewOutlineProvider(SizeUtils.dp2px(12.0f).toFloat())
+        clipToOutline = true;
     }
 
     fun create(surfaceTexture: SurfaceTexture) {
@@ -170,29 +154,29 @@ class PlayerTextureView  : TextureView, TextureView.SurfaceTextureListener {
     }
 
     override fun onSurfaceTextureAvailable(surface: SurfaceTexture, width: Int, height: Int) {
-        Log.d("native-lib", "onSurfaceTextureAvailable width:$width, height:$height, address:$this")
+        Log.d("TAG", "onSurfaceTextureAvailable width:$width, height:$height, address:$this")
         create(surface)
     }
 
     override fun onSurfaceTextureSizeChanged(surface: SurfaceTexture, width: Int, height: Int) {
-        Log.d("native-lib", "onSurfaceTextureSizeChanged width:$width, height:$height")
+        Log.d("TAG", "onSurfaceTextureSizeChanged width:$width, height:$height")
     }
 
     override fun onSurfaceTextureDestroyed(surface: SurfaceTexture): Boolean {
-        Log.d("native-lib", "onSurfaceTextureDestroyed, address:$this")
+        Log.d("TAG", "onSurfaceTextureDestroyed, address:$this")
         stop()
         return true
     }
 
     override fun onSurfaceTextureUpdated(surface: SurfaceTexture) {
-        Log.d("native-lib", "onSurfaceTextureUpdated")
+        Log.d("TAG", "onSurfaceTextureUpdated")
     }
 
 
     class TextureViewOutlineProvider(var radius: Float = 0.0f) : ViewOutlineProvider() {
         override fun getOutline(view: View?, outline: Outline?) {
             view?.let {
-                var rect = Rect()
+                val rect = Rect()
                 it.getGlobalVisibleRect(rect)
                 val leftMargin = 0
                 val topMargin = 0
@@ -200,9 +184,7 @@ class PlayerTextureView  : TextureView, TextureView.SurfaceTextureListener {
                     leftMargin, topMargin,
                     rect.right - rect.left - leftMargin, rect.bottom - rect.top - topMargin
                 )
-                outline?.let {
-                    it.setRoundRect(selfRect, this.radius)
-                }
+                outline?.setRoundRect(selfRect, this.radius)
             }
         }
     }
