@@ -25,6 +25,7 @@ import me.tang.mvvm.network.RESULT
 import me.tang.mvvm.BR
 import javax.inject.Inject
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.onCompletion
 
 @HiltViewModel
 class MainViewModel @Inject constructor() : BaseViewModel() {
@@ -77,7 +78,6 @@ class MainViewModel @Inject constructor() : BaseViewModel() {
                         removeAt(index)
                         add(index,  item.copy(play = !item.play))
                     }
-
 
                     //Log.d("EditViewModel", "4 _items.value: ${_items.value}")
                 }
@@ -142,6 +142,9 @@ class MainViewModel @Inject constructor() : BaseViewModel() {
             .catch {
                 val e = ExceptionHandle.handleException(it)
                 callError(Message(e.code, e.msg))
+            }
+            .onCompletion {
+                callComplete()
             }
             .collect {
                 _items.value = it

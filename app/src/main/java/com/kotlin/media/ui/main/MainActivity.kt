@@ -6,6 +6,7 @@ import android.content.pm.PackageManager
 import android.os.Bundle
 import android.util.Log
 import androidx.core.app.ActivityCompat
+import com.kotlin.media.R
 import com.kotlin.media.databinding.ActivityMainBinding
 import com.kotlin.media.ui.edit.EditActivity
 import com.kotlin.media.ui.group.VideoGroupActivity
@@ -20,35 +21,29 @@ class MainActivity : BaseActivity<MainViewModel, ActivityMainBinding>() {
         Log.d("native-lib", "mBinding is $mBinding")
         mBinding.viewModel = viewModel
 
-        mBinding.run {
-            /*
-            recyclerView.run {
-                setPullRefreshEnabled(false)
-                setLoadingMoreEnabled(false)
-                setLoadingMoreProgressStyle(ProgressStyle.Pacman)
-                setLoadingListener(object : XRecyclerView.LoadingListener {
-                    override fun onRefresh() {
-                    }
-
-                    override fun onLoadMore() {
-
-                    }
-                })
-            }*/
-
-            // 不复用item
-            //recyclerView.recycledViewPool.setMaxRecycledViews(R.layout.item_video_player, 4)
-            //recyclerView.setItemViewCacheSize(0)
+        mBinding.swipeRefreshLayout.run {
+            setColorSchemeResources(R.color.textColorPrimary)
+            setProgressBackgroundColorSchemeResource(R.color.bgColorPrimary)
+            setOnRefreshListener { viewModel.refreshVideoList() }
         }
 
-        //mBinding.ivAdd.setOnClickListener { startActivity(Intent(this, EditActivity::class.java))  }
-        mBinding.ivAdd.setOnClickListener { startActivity(Intent(this, VideoGroupActivity::class.java))  }
-
+        mBinding.ivAdd.setOnClickListener {
+            startActivity(Intent(this, EditActivity::class.java))
+            //startActivity(Intent(this, VideoGroupActivity::class.java))
+        }
     }
 
     override fun initData() {
         verifyStoragePermissions(this);
         viewModel.refreshVideoList()
+    }
+
+    override fun onLoadCompleted() {
+        super.onLoadCompleted()
+        mBinding.swipeRefreshLayout.run {
+            if (isRefreshing)
+                isRefreshing = false
+        }
     }
 
     override fun onStart() {
