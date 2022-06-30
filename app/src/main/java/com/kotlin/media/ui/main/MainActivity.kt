@@ -12,6 +12,8 @@ import com.kotlin.media.ui.edit.EditActivity
 import com.kotlin.media.ui.group.VideoGroupActivity
 import dagger.hilt.android.AndroidEntryPoint
 import me.tang.mvvm.base.BaseActivity
+import me.tang.xrecyclerview.ProgressStyle
+import me.tang.xrecyclerview.XRecyclerView
 import java.lang.Exception
 
 @AndroidEntryPoint
@@ -25,6 +27,20 @@ class MainActivity : BaseActivity<MainViewModel, ActivityMainBinding>() {
             setColorSchemeResources(R.color.textColorPrimary)
             setProgressBackgroundColorSchemeResource(R.color.bgColorPrimary)
             setOnRefreshListener { viewModel.refreshVideoList() }
+        }
+
+        mBinding.recyclerView.run {
+            setPullRefreshEnabled(false)
+            setLoadingMoreEnabled(true)
+            setLoadingMoreProgressStyle(ProgressStyle.Pacman)
+            setLoadingListener(object : XRecyclerView.LoadingListener {
+                override fun onRefresh() {
+                }
+
+                override fun onLoadMore() {
+                    viewModel.refreshVideoList()
+                }
+            })
         }
 
         mBinding.ivAdd.setOnClickListener {
@@ -44,6 +60,7 @@ class MainActivity : BaseActivity<MainViewModel, ActivityMainBinding>() {
             if (isRefreshing)
                 isRefreshing = false
         }
+        mBinding.recyclerView.loadMoreComplete()
     }
 
     override fun onStart() {
