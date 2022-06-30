@@ -18,69 +18,37 @@ import me.tang.mvvm.base.OnItemClickListener
 import me.tang.mvvm.bus.Bus
 import me.tatarka.bindingcollectionadapter2.ItemBinding
 import kotlinx.coroutines.flow.collect
+import me.tang.videoplayerview.PlayerTextureView
 
 class VideoPlayerViewModel : BaseViewModel() {
 
     val listenner = object : OnItemClickListener<Video> {
         override fun onClick(view: View, item: Video) {
+            val ptvPlayer = (view.parent as View).findViewById<PlayerTextureView>(R.id.ptv_player)
+            check(ptvPlayer != null) { "not found PlayerTextureView" }
+
             when(view.id) {
                 R.id.ivPlay -> {
-                    var ptvPlayer = (view.parent as View).findViewById<me.tang.videoplayerview.PlayerTextureView>(R.id.ptv_player)
+                    if (!item.play) ptvPlayer.start(item.url) else ptvPlayer.stop()
 
-                    Log.d("native-lib", "DetailViewModel.ivPlay: " + ptvPlayer)
+                    item.play = !item.play
+                    _itemBean.value = item
 
-                    ptvPlayer?.let {
-                        if (!item.play) ptvPlayer.start(item.url) else ptvPlayer.stop()
-                        item.play = !item.play
-                        _itemBean.value = item
-                        if (item.play)
-                            refreshDuration(it)
-                        else
-                            isRefreshDurationExit = true
-                    }
+                    if (item.play)
+                        refreshDuration(ptvPlayer)
+                    else
+                        isRefreshDurationExit = true
                 }
                 R.id.ivPaused -> {
-                    var ptvPlayer = (view.parent as View).findViewById<me.tang.videoplayerview.PlayerTextureView>(R.id.ptv_player)
-
-                    Log.d("native-lib", "DetailViewModel.ivPaused: " + ptvPlayer)
-
-                    ptvPlayer?.let {
-                        ptvPlayer.tooglePause()
-                        isRefreshDurationPaused = !isRefreshDurationPaused
-                    }
+                    ptvPlayer.tooglePause()
+                    isRefreshDurationPaused = !isRefreshDurationPaused
                 }
                 R.id.ivMute -> {
-                    var ptvPlayer = (view.parent as View).findViewById<me.tang.videoplayerview.PlayerTextureView>(R.id.ptv_player)
-
-                    Log.d("native-lib", "DetailViewModel.ivPaused: " + ptvPlayer)
-
-                    ptvPlayer?.let {
-                        ptvPlayer.toogleMute()
-                    }
+                    ptvPlayer.toogleMute()
                 }
             }
         }
     }
-
-    private val _progress = MutableLiveData<Int>()
-
-    val progress: LiveData<Int> = _progress
-
-    private val _currentDuration = MutableLiveData<String>()
-
-    val currentDuration: LiveData<String> = _currentDuration
-
-    private val _itemBean = MutableLiveData<Video>()
-
-    val itemBean: LiveData<Video> = _itemBean
-
-    fun setBean(item : Video) {
-        _itemBean.value = item
-    }
-
-    private val _rate = MutableLiveData<String>()
-
-    val rate: LiveData<String> = _rate
 
     val listenner2 = object : OnItemClickListener<String> {
         override fun onClick(view: View, item: String) {
@@ -90,8 +58,21 @@ class VideoPlayerViewModel : BaseViewModel() {
         }
     }
 
+    private val _progress = MutableLiveData<Int>()
+    val progress: LiveData<Int> = _progress
+
+    private val _currentDuration = MutableLiveData<String>()
+    val currentDuration: LiveData<String> = _currentDuration
+
+    private val _itemBean = MutableLiveData<Video>()
+    val itemBean: LiveData<Video> = _itemBean
+
+    private val _rate = MutableLiveData<String>()
+    val rate: LiveData<String> = _rate
+
     private val _items = MutableLiveData<MutableList<String>>()
     val items: LiveData<MutableList<String>> = _items
+
     val itemBinding = ItemBinding.of<String>(BR.itemBean, R.layout.fragment_rate_list_dialog_list_dialog_item)
         .bindExtra(BR.listenner, listenner2)
 
@@ -108,14 +89,19 @@ class VideoPlayerViewModel : BaseViewModel() {
         _rate.value = rates[4]
     }
 
+    fun setBean(item : Video) {
+        _itemBean.value = item
+    }
+
     fun updateDuration(paused: Boolean) {
         isRefreshDurationPaused = paused
     }
 
-    fun refreshDuration(ptvPlayer: me.tang.videoplayerview.PlayerTextureView) {
+    fun refreshDuration(ptvPlayer: PlayerTextureView) {
         isRefreshDurationExit = false
         isRefreshDurationPaused = false
-        viewModelScope.launch {
+
+        launchUI {
             flow {
                 while (!isRefreshDurationExit) {
 
@@ -124,8 +110,8 @@ class VideoPlayerViewModel : BaseViewModel() {
                         continue
                     }
 
-                    val duration = ptvPlayer.getCurrentDuration()
-                    emit(duration)
+                    emit(ptvPlayer.getCurrentDuration())
+
                     delay(200)
                 }
             }

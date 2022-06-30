@@ -34,23 +34,14 @@ class VideoPlayerFragment : BaseFragment<VideoPlayerViewModel, FragmentVideoPlay
         mBinding.viewModel = viewModel
 
         mBinding.volumeUri.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-
             var lastProgress = 100
 
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean)
-            {
-                lastProgress = progress
-            }
+            { lastProgress = progress }
 
-            override fun onStartTrackingTouch(seekBar: SeekBar?)
-            {
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
 
-            }
-
-            override fun onStopTrackingTouch(seekBar: SeekBar?)
-            {
-                //val attenuation = 100 - lastProgress
-                //val millibel = attenuation * -50
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {
                 setVolume(lastProgress)
             }
         })
@@ -61,17 +52,13 @@ class VideoPlayerFragment : BaseFragment<VideoPlayerViewModel, FragmentVideoPlay
 
             var lastProgress = 100
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean)
-            {
-                lastProgress = progress
-            }
+            { lastProgress = progress }
 
-            override fun onStartTrackingTouch(seekBar: SeekBar?)
-            {
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {
                 viewModel.updateDuration(true)
             }
 
-            override fun onStopTrackingTouch(seekBar: SeekBar?)
-            {
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {
                 val duration = mBinding.ptvPlayer.getDuration()
                 val x = duration * lastProgress /  Int.MAX_VALUE
                 mBinding.ptvPlayer.seek(x)
