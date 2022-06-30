@@ -18,10 +18,10 @@ class VideoPlayerActivity  : BaseActivity<VideoPlayerViewModel, ActivityVideoPla
     override fun initView(savedInstanceState: Bundle?) {
 
         fragment = supportFragmentManager.findFragmentById(R.id.video_player_fragment) as? VideoPlayerFragment
-        check(fragment!=null) { "video player fragment not found" }
+        check(fragment!=null) { "not found VideoPlayerFragment" }
 
         video = intent.getParcelableExtra(PARAM_VIDEO) as? Video
-        check(video!=null) { "param video is not set" }
+        check(video!=null) { "invalid param video" }
 
         fragment?.setVideo(video!!)
 
