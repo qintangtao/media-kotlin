@@ -67,7 +67,7 @@ JNI_OnLoad(JavaVM *vm, void *res) {
 }
 
 extern "C" JNIEXPORT jlong JNICALL
-Java_me_tang_ffplay_DeviceSurface_ffmpegOpen(
+Java_me_tang_ffplay_FFplay_open(
         JNIEnv* env,
         jobject /* this */,
         jstring url,
@@ -85,7 +85,7 @@ Java_me_tang_ffplay_DeviceSurface_ffmpegOpen(
     return (jlong)is;
 }
 extern "C" JNIEXPORT void JNICALL
-Java_me_tang_ffplay_DeviceSurface_ffmpegClose(
+Java_me_tang_ffplay_FFplay_close(
         JNIEnv* env,
         jobject /* this */,
         jlong handle) {
@@ -102,7 +102,7 @@ Java_me_tang_ffplay_DeviceSurface_ffmpegClose(
     env->DeleteGlobalRef(gsurface);
 }
 extern "C" JNIEXPORT void JNICALL
-Java_me_tang_ffplay_DeviceSurface_ffmpegSendEvent(
+Java_me_tang_ffplay_FFplay_sendEvent(
         JNIEnv* env,
         jobject /* this */,
         jlong handle,
@@ -118,7 +118,7 @@ Java_me_tang_ffplay_DeviceSurface_ffmpegSendEvent(
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_me_tang_ffplay_DeviceSurface_ffmpegSetVolume(
+Java_me_tang_ffplay_FFplay_setVolume(
         JNIEnv* env,
         jobject /* this */,
         jlong handle,
@@ -135,7 +135,7 @@ Java_me_tang_ffplay_DeviceSurface_ffmpegSetVolume(
 }
 
 extern "C" JNIEXPORT jlong JNICALL
-Java_me_tang_ffplay_DeviceSurface_ffmpegDuration(
+Java_me_tang_ffplay_FFplay_duration(
         JNIEnv* env,
         jobject /* this */,
         jlong handle) {
@@ -152,7 +152,7 @@ Java_me_tang_ffplay_DeviceSurface_ffmpegDuration(
 }
 
 extern "C" JNIEXPORT jlong JNICALL
-Java_me_tang_ffplay_DeviceSurface_ffmpegCurrentDuration(
+Java_me_tang_ffplay_FFplay_currentDuration(
         JNIEnv* env,
         jobject /* this */,
         jlong handle) {
@@ -169,7 +169,7 @@ Java_me_tang_ffplay_DeviceSurface_ffmpegCurrentDuration(
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_me_tang_ffplay_DeviceSurface_ffmpegSeek(
+Java_me_tang_ffplay_FFplay_seek(
         JNIEnv* env,
         jobject /* this */,
         jlong handle,
@@ -185,7 +185,7 @@ Java_me_tang_ffplay_DeviceSurface_ffmpegSeek(
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_me_tang_ffplay_DeviceSurface_ffmpegSetRate(
+Java_me_tang_ffplay_FFplay_setRate(
         JNIEnv* env,
         jobject /* this */,
         jlong handle,
