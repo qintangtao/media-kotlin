@@ -7,7 +7,7 @@
             type="com.kotlin.media.model.bean.Video" />
         <variable
             name="listenner"
-            type="com.kotlin.mvvm.base.OnItemClickListener" />
+            type="me.tang.mvvm.base.OnItemClickListener" />
         <variable
             name="listenner2"
             type="com.kotlin.media.ui.base.OnItemLongClickListener" />
@@ -22,7 +22,7 @@
         app:play_background="@drawable/ic_chevron_right_black_24dp"
         app:text="@{itemBean.name}"
         app:text_appearance="@style/VideoPlayerView_text"
-        app:filename="@{itemBean.url}"/>
+        app:url="@{itemBean.url}"/>
 
     <!--
 

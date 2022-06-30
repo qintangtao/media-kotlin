@@ -6,11 +6,11 @@ import android.content.pm.PackageManager
 import android.os.Bundle
 import android.util.Log
 import androidx.core.app.ActivityCompat
-import com.kotlin.media.R
 import com.kotlin.media.databinding.ActivityMainBinding
+import com.kotlin.media.ui.edit.EditActivity
 import com.kotlin.media.ui.group.VideoGroupActivity
-import com.kotlin.mvvm.base.BaseActivity
 import dagger.hilt.android.AndroidEntryPoint
+import me.tang.mvvm.base.BaseActivity
 import java.lang.Exception
 
 @AndroidEntryPoint
@@ -54,25 +54,21 @@ class MainActivity : BaseActivity<MainViewModel, ActivityMainBinding>() {
     override fun onStart() {
         super.onStart()
         Log.d("EditViewModel", "onStart")
-
-        //DeviceSurface.get().pauseFfmpeg()
     }
 
     override fun onPause() {
         super.onPause()
         Log.d("EditViewModel", "onPause")
-
-        //DeviceSurface.get().pauseFfmpeg();
     }
 
-    private var PERMISSION_STORAGE = arrayOf(
+    private val PERMISSION_STORAGE = arrayOf(
         android.Manifest.permission.READ_EXTERNAL_STORAGE,
         android.Manifest.permission.WRITE_EXTERNAL_STORAGE
     )
 
     private fun verifyStoragePermissions(activity: Activity) {
         try {
-            var permission = ActivityCompat.checkSelfPermission(activity,
+            val permission = ActivityCompat.checkSelfPermission(activity,
                 android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
             if (permission != PackageManager.PERMISSION_GRANTED) {
                 ActivityCompat.requestPermissions(activity, PERMISSION_STORAGE, 1)

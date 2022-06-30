@@ -2,20 +2,25 @@ package com.kotlin.media.ui.edit
 
 import android.os.Bundle
 import android.util.Log
+import androidx.activity.viewModels
 import com.blankj.utilcode.util.ToastUtils
 import com.kotlin.media.data.local.VideoDao
 import com.kotlin.media.databinding.ActivityEditBinding
-import com.kotlin.mvvm.base.BaseActivity
-import com.kotlin.mvvm.event.Message
-import com.kotlin.mvvm.network.RESULT
+import me.tang.mvvm.base.BaseActivity
+import me.tang.mvvm.event.Message
+import me.tang.mvvm.network.RESULT
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
+
 
 @AndroidEntryPoint
 class EditActivity : BaseActivity<EditViewModel, ActivityEditBinding>() {
 
     @Inject
     lateinit var videoDao: VideoDao
+
+    private val vm by viewModels<EditViewModel>()
+
 
     override fun initView(savedInstanceState: Bundle?) {
         mBinding.viewModel = viewModel

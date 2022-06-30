@@ -5,8 +5,8 @@ import android.widget.SeekBar
 import androidx.fragment.app.Fragment
 import com.kotlin.media.databinding.FragmentVideoPlayerBinding
 import com.kotlin.media.model.bean.Video
-import com.kotlin.mvvm.base.BaseFragment
-import com.kotlin.mvvm.bus.Bus
+import me.tang.mvvm.base.BaseFragment
+import me.tang.mvvm.bus.Bus
 
 // TODO: Rename parameter arguments, choose names that match
 // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER

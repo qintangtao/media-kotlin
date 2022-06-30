@@ -1,5 +1,6 @@
 package com.kotlin.media.ui.main
 
+import android.content.Intent
 import android.util.Log
 import android.view.View
 import androidx.appcompat.app.AlertDialog
@@ -8,21 +9,22 @@ import androidx.lifecycle.MutableLiveData
 import androidx.recyclerview.widget.DiffUtil
 import com.kotlin.media.R
 import com.kotlin.media.model.bean.Video
-import com.kotlin.mvvm.BR
-import com.kotlin.mvvm.base.BaseViewModel
-import com.kotlin.mvvm.base.OnItemClickListener
 import me.tatarka.bindingcollectionadapter2.ItemBinding
 import com.kotlin.media.data.local.VideoDao
 import com.kotlin.media.ui.base.OnItemLongClickListener
-import me.tang.videoplayerview.PlayerTextureView
-import com.kotlin.mvvm.event.Message
-import com.kotlin.mvvm.network.ExceptionHandle
-import com.kotlin.mvvm.network.RESULT
+import com.kotlin.media.ui.player.VideoPlayerActivity
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flowOn
+import me.tang.mvvm.base.BaseViewModel
+import me.tang.mvvm.base.OnItemClickListener
+import me.tang.mvvm.event.Message
+import me.tang.mvvm.network.ExceptionHandle
+import me.tang.mvvm.network.RESULT
+import me.tang.mvvm.BR
 import javax.inject.Inject
+import kotlinx.coroutines.flow.collect
 
 @HiltViewModel
 class MainViewModel @Inject constructor() : BaseViewModel() {
@@ -33,6 +35,14 @@ class MainViewModel @Inject constructor() : BaseViewModel() {
     private val onItemLongClickListener = object : OnItemLongClickListener<Video> {
         override fun onClick(view: View, item: Video): Boolean {
             Log.d("EditViewModel", "MainViewModel.onLongClick:" + view)
+
+            view.context.startActivity(Intent().apply {
+                setClass(view.context, VideoPlayerActivity::class.java)
+                putExtra(VideoPlayerActivity.PARAM_VIDEO, item)
+            })
+
+            return true
+
             AlertDialog.Builder(view.context)
                 .setMessage(R.string.confirm_delete)
                 .setPositiveButton(R.string.confirm) { _, _ ->
@@ -128,15 +138,15 @@ class MainViewModel @Inject constructor() : BaseViewModel() {
             launchFlow {
                 videoDao.getAllVideos()
             }
-                .flowOn(Dispatchers.IO)
-                .catch {
-                    val e = ExceptionHandle.handleException(it)
-                    callError(Message(e.code, e.msg))
-                }
-                .collect {
-                    _items.value = it
-                    callResult(RESULT.SUCCESS.code)
-                }
+            .flowOn(Dispatchers.IO)
+            .catch {
+                val e = ExceptionHandle.handleException(it)
+                callError(Message(e.code, e.msg))
+            }
+            .collect {
+                _items.value = it
+                callResult(RESULT.SUCCESS.code)
+            }
         }
     }
 

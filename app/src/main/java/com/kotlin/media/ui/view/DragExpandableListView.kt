@@ -14,7 +14,6 @@ import android.view.WindowManager
 import android.widget.ExpandableListView
 import android.widget.ImageView
 import com.blankj.utilcode.util.BarUtils
-import com.blankj.utilcode.util.ScreenUtils
 import com.blankj.utilcode.util.SizeUtils
 
 

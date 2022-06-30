@@ -10,8 +10,8 @@ import com.blankj.utilcode.util.ScreenUtils
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.kotlin.media.databinding.FragmentRateListDialogListDialogBinding
-import com.kotlin.mvvm.base.BaseBottomSheetDialogFragment
-import com.kotlin.mvvm.bus.Bus
+import me.tang.mvvm.base.BaseBottomSheetDialogFragment
+import me.tang.mvvm.bus.Bus
 
 /**
  *

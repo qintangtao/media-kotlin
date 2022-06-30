@@ -1,20 +1,17 @@
 package com.kotlin.media.ui.group
 
 import android.os.Bundle
-import android.util.Log
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
 import android.widget.AbsListView
-import android.widget.BaseExpandableListAdapter
+import androidx.activity.viewModels
 import androidx.databinding.DataBindingUtil
 import androidx.databinding.ViewDataBinding
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
 import com.kotlin.media.databinding.FragmentVideoGroupBinding
 import com.kotlin.media.databinding.ItemVideoChildrenBinding
 import com.kotlin.media.databinding.ItemVideoGroupBinding
-import com.kotlin.mvvm.base.BaseFragment
-import com.kotlin.mvvm.base.NoViewModel
+import com.kotlin.media.ui.edit.EditViewModel
+import me.tang.mvvm.base.BaseFragment
 
 // TODO: Rename parameter arguments, choose names that match
 // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
@@ -31,9 +28,13 @@ class VideoGroupFragment : BaseFragment<VideoGroupViewModel, FragmentVideoGroupB
     private var param1: String? = null
     private var param2: String? = null
 
+    private val vm by viewModels<VideoGroupViewModel>()
+    private val name by lazy { "test by lazy" }
+
     override fun initView(savedInstanceState: Bundle?) {
         super.initView(savedInstanceState)
         mBinding.viewModel = viewModel
+
 
         arguments?.let {
             param1 = it.getString(ARG_PARAM1)

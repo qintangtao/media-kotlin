@@ -4,7 +4,7 @@
         <variable name="itemBean" type="String" />
         <variable
             name="listenner"
-            type="com.kotlin.mvvm.base.OnItemClickListener" />
+            type="me.tang.mvvm.base.OnItemClickListener" />
     </data>
 <TextView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"

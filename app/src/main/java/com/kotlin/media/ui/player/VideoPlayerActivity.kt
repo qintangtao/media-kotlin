@@ -5,7 +5,7 @@ import android.util.Log
 import com.kotlin.media.R
 import com.kotlin.media.databinding.ActivityVideoPlayerBinding
 import com.kotlin.media.model.bean.Video
-import com.kotlin.mvvm.base.BaseActivity
+import me.tang.mvvm.base.BaseActivity
 
 class VideoPlayerActivity  : BaseActivity<VideoPlayerViewModel, ActivityVideoPlayerBinding>() {
 

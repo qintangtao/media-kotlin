@@ -2,8 +2,8 @@ package com.kotlin.media.ui.group
 
 import android.os.Bundle
 import com.kotlin.media.databinding.ActivityVideoGroupBinding
-import com.kotlin.mvvm.base.BaseActivity
-import com.kotlin.mvvm.base.NoViewModel
+import me.tang.mvvm.base.BaseActivity
+import me.tang.mvvm.base.NoViewModel
 
 class VideoGroupActivity : BaseActivity<NoViewModel, ActivityVideoGroupBinding>() {
 

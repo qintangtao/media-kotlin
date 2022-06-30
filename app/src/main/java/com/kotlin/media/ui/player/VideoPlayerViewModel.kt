@@ -7,18 +7,17 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import com.kotlin.media.R
 import com.kotlin.media.model.bean.Video
-import me.tang.videoplayerview.PlayerTextureView
-import com.kotlin.mvvm.BR
-import com.kotlin.mvvm.base.BaseViewModel
-import com.kotlin.mvvm.base.OnItemClickListener
-import com.kotlin.mvvm.bus.Bus
+import me.tang.mvvm.BR
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
+import me.tang.mvvm.base.BaseViewModel
+import me.tang.mvvm.base.OnItemClickListener
+import me.tang.mvvm.bus.Bus
 import me.tatarka.bindingcollectionadapter2.ItemBinding
-
+import kotlinx.coroutines.flow.collect
 
 class VideoPlayerViewModel : BaseViewModel() {
 

@@ -3,17 +3,18 @@ package com.kotlin.media.ui.group
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import com.kotlin.media.R
-import com.kotlin.mvvm.BR
-import com.kotlin.mvvm.base.BaseViewModel
-import com.kotlin.mvvm.event.Message
-import com.kotlin.mvvm.network.ExceptionHandle
-import com.kotlin.mvvm.network.RESULT
+import me.tang.mvvm.BR
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flowOn
 import me.tang.bindingcollectionadapter.ItemBinding
+import me.tang.mvvm.base.BaseViewModel
+import me.tang.mvvm.event.Message
+import me.tang.mvvm.network.ExceptionHandle
+import me.tang.mvvm.network.RESULT
 import javax.inject.Inject
+import kotlinx.coroutines.flow.collect
 
 @HiltViewModel
 class VideoGroupViewModel @Inject constructor() : BaseViewModel() {
@@ -93,10 +94,10 @@ class VideoGroupViewModel @Inject constructor() : BaseViewModel() {
                 val e = ExceptionHandle.handleException(it)
                 callError(Message(e.code, e.msg))
             }
-            .collect {
-                _groups.value = it
-                callResult(RESULT.SUCCESS.code)
-            }
+                .collect {
+                    _groups.value = it
+                    callResult(RESULT.SUCCESS.code)
+                }
         }
 
         launchUI {
