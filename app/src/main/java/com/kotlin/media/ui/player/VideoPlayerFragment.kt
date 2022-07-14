@@ -93,7 +93,9 @@ class VideoPlayerFragment : BaseFragment<VideoPlayerViewModel, FragmentVideoPlay
 
     override fun lazyLoadData() {
         super.lazyLoadData()
-        viewModel.initData(video)
+        _video?.let {
+            viewModel.initData(it)
+        }
     }
 
     fun setVolume(percent: Int) {

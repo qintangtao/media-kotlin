@@ -1,8 +1,14 @@
 package com.kotlin.media.ui.group
 
+import android.content.Intent
+import android.view.View
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import com.blankj.utilcode.util.ActivityUtils
+import com.blankj.utilcode.util.ScreenUtils
 import com.kotlin.media.R
+import com.kotlin.media.model.bean.Video
+import com.kotlin.media.ui.player.VideoPlayerActivity
 import me.tang.mvvm.BR
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -15,6 +21,7 @@ import me.tang.mvvm.network.ExceptionHandle
 import me.tang.mvvm.network.RESULT
 import javax.inject.Inject
 import kotlinx.coroutines.flow.collect
+import me.tang.mvvm.base.OnItemClickListener
 
 @HiltViewModel
 class VideoGroupViewModel @Inject constructor() : BaseViewModel() {
@@ -75,6 +82,20 @@ class VideoGroupViewModel @Inject constructor() : BaseViewModel() {
         )
     )
 
+    val listener = object : OnItemClickListener<String> {
+        override fun onClick(view: View, item: String) {
+            val v = Video(1, "v1080.mp4", "/data/local/tmp/v1080.mp4")
+            if (ScreenUtils.isPortrait())
+            {
+                view.context.startActivity(Intent().apply {
+                    setClass(view.context, VideoPlayerActivity::class.java)
+                    putExtra(VideoPlayerActivity.PARAM_VIDEO, v)
+                })
+            }
+
+        }
+    }
+
     private val _groups = MutableLiveData<MutableList<String>>()
     val groups: LiveData<MutableList<String>> = _groups
     val groupBinding = ItemBinding.of<String>(BR.itemBean, BR.groupPosition, R.layout.item_video_group)
@@ -82,6 +103,8 @@ class VideoGroupViewModel @Inject constructor() : BaseViewModel() {
     private val _childrens = MutableLiveData<MutableList<MutableList<String>>>()
     val childrens: LiveData<MutableList<MutableList<String>>> = _childrens
     val childBinding = ItemBinding.of<String>(BR.itemBean, BR.groupPosition, BR.childPosition, R.layout.item_video_children)
+        .bindExtra(BR.listenner, listener)
+
 
     fun refreshVideoList() {
 

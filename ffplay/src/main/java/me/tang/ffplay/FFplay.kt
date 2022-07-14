@@ -5,7 +5,7 @@ import android.view.Surface
 class FFplay {
 
 
-    external fun open(filename: String,  surface: Surface) : Long
+    external fun open(filename: String, surface: Surface) : Long
 
     external fun close(handle: Long)
 
@@ -20,6 +20,8 @@ class FFplay {
     external fun seek(handle: Long, pos: Long)
 
     external fun setRate(handle: Long, rate: Int)
+
+    external fun setSurface(handle: Long, surface: Surface)
 
     companion object {
         init {

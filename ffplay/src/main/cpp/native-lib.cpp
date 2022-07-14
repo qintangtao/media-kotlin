@@ -84,6 +84,7 @@ Java_me_tang_ffplay_FFplay_open(
 
     return (jlong)is;
 }
+
 extern "C" JNIEXPORT void JNICALL
 Java_me_tang_ffplay_FFplay_close(
         JNIEnv* env,
@@ -99,8 +100,10 @@ Java_me_tang_ffplay_FFplay_close(
 
     stream_close(is);
 
-    env->DeleteGlobalRef(gsurface);
+    if (gsurface)
+        env->DeleteGlobalRef(gsurface);
 }
+
 extern "C" JNIEXPORT void JNICALL
 Java_me_tang_ffplay_FFplay_sendEvent(
         JNIEnv* env,
@@ -199,3 +202,26 @@ Java_me_tang_ffplay_FFplay_setRate(
 
     set_rate(is, rate);
 }
+
+
+extern "C" JNIEXPORT void JNICALL
+Java_me_tang_ffplay_FFplay_setSurface(
+        JNIEnv* env,
+        jobject /* this */,
+        jlong handle,
+        jobject surface) {
+
+    VideoState *is = (VideoState *)handle;
+
+    const char *utf8 = stream_filename(is);
+    jobject gsurface = (jobject)stream_surface(is);
+    jobject new_gsurface = env->NewGlobalRef(surface);
+
+    LOGV("set surface  file %s, old surface %x, new surface %x\n", utf8, gsurface, new_gsurface);
+
+    set_surface(is, new_gsurface);
+
+    if (gsurface)
+        env->DeleteGlobalRef(gsurface);
+}
+

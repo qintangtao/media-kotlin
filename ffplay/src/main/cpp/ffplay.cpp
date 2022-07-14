@@ -3632,3 +3632,31 @@ void set_rate(VideoState *is, int rate)
     if (is->audios)
         android_SetRate(is->audios, rate);
 }
+
+void set_surface(VideoState *is, void *surface)
+{
+    if (is->surface == surface)
+        return;
+
+    if (is->window) {
+        ANativeWindow_release(is->window);
+        is->window = NULL;
+    }
+
+    is->surface = surface;
+    if (is->surface) {
+        JNIEnv *env = ff_jni_get_env(is->viddec.avctx);
+        if (!env) {
+            av_log(NULL, AV_LOG_FATAL, "jni_get_env failed\n");
+            return;
+        }
+
+        is->window = ANativeWindow_fromSurface(env, (jobject)is->surface);
+        av_log(NULL, AV_LOG_INFO, "ANativeWindow_fromSurface window: %x, surface: %x\n", is->window, is->surface);
+    } else {
+        if (is->window) {
+            ANativeWindow_release(is->window);
+            is->window = NULL;
+        }
+    }
+}

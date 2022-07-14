@@ -28,13 +28,12 @@ class VideoGroupFragment : BaseFragment<VideoGroupViewModel, FragmentVideoGroupB
     private var param1: String? = null
     private var param2: String? = null
 
-    private val vm by viewModels<VideoGroupViewModel>()
-    private val name by lazy { "test by lazy" }
+    //private val vm by viewModels<VideoGroupViewModel>()
+    //private val name by lazy { "test by lazy" }
 
     override fun initView(savedInstanceState: Bundle?) {
         super.initView(savedInstanceState)
         mBinding.viewModel = viewModel
-
 
         arguments?.let {
             param1 = it.getString(ARG_PARAM1)
@@ -85,6 +84,8 @@ class VideoGroupFragment : BaseFragment<VideoGroupViewModel, FragmentVideoGroupB
             }
 
         })
+
+
     }
 
     override fun lazyLoadData() {

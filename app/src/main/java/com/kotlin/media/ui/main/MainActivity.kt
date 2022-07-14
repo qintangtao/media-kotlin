@@ -6,6 +6,7 @@ import android.content.pm.PackageManager
 import android.os.Bundle
 import android.util.Log
 import androidx.core.app.ActivityCompat
+import com.blankj.utilcode.util.ScreenUtils
 import com.kotlin.media.R
 import com.kotlin.media.databinding.ActivityMainBinding
 import com.kotlin.media.ui.edit.EditActivity
@@ -22,6 +23,9 @@ class MainActivity : BaseActivity<MainViewModel, ActivityMainBinding>() {
     override fun initView(savedInstanceState: Bundle?) {
         Log.d("native-lib", "mBinding is $mBinding")
         mBinding.viewModel = viewModel
+
+        ScreenUtils.getScreenWidth()
+
 
         mBinding.swipeRefreshLayout.run {
             setColorSchemeResources(R.color.textColorPrimary)
@@ -44,8 +48,8 @@ class MainActivity : BaseActivity<MainViewModel, ActivityMainBinding>() {
         }
 
         mBinding.ivAdd.setOnClickListener {
-            startActivity(Intent(this, EditActivity::class.java))
-            //startActivity(Intent(this, VideoGroupActivity::class.java))
+            //startActivity(Intent(this, EditActivity::class.java))
+            startActivity(Intent(this, VideoGroupActivity::class.java))
         }
     }
 

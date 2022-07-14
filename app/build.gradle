@@ -57,7 +57,7 @@ dependencies {
     //api rootProject.ext.dependencies.xrecyclerview 弃用（不支持diff）
 
     // 支持androidx
-    implementation 'com.github.qintangtao:xrecyclerview:1.0.1'
+    implementation 'com.github.qintangtao:xrecyclerview:1.0.2'
 
     //room
     api rootProject.ext.room["room-runtime"]

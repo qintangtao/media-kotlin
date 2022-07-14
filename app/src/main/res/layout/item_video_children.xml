@@ -10,12 +10,16 @@
         <variable
             name="childPosition"
             type="int" />
+        <variable
+            name="listenner"
+            type="me.tang.mvvm.base.OnItemClickListener" />
     </data>
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content">
+    android:layout_height="wrap_content"
+    android:onClick="@{(view)->listenner.onClick(view, itemBean)}">>
 
     <TextView
         android:id="@+id/tvName"

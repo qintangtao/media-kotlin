@@ -50,4 +50,6 @@ void seek_pos(VideoState *is, int64_t pos);
 
 void set_rate(VideoState *is, int rate);
 
+void set_surface(VideoState *is, void *surface);
+
 #endif //NDKDEMO_FFPLAY_H
