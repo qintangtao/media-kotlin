@@ -25,6 +25,7 @@ class FFplay {
 
     companion object {
         init {
+            System.loadLibrary("sdl")
             System.loadLibrary("ffplay")
         }
 

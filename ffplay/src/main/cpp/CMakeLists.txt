@@ -48,6 +48,16 @@ set_target_properties(libyuv
         ${CMAKE_SOURCE_DIR}/libyuv/libs/${ANDROID_ABI}/libyuv.so)
 
 
+
+include_directories(libsdl/include)
+add_library(libsdl
+        SHARED
+        IMPORTED)
+set_target_properties(libsdl
+        PROPERTIES IMPORTED_LOCATION
+        ${CMAKE_SOURCE_DIR}/libsdl/libs/${ANDROID_ABI}/libsdl.so)
+
+
 include_directories(libffmpeg/include)
 #[[
 add_library(libffmpeg
@@ -123,6 +133,7 @@ find_library( # Sets the name of the path variable.
 target_link_libraries( # Specifies the target library.
                         ffplay
                         mediandk
+                        libsdl
                         libyuv
                         #libffmpeg
                         libavutil

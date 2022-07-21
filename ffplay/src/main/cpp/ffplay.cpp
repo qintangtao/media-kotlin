@@ -11,6 +11,8 @@
 #include "yuv_util.h"
 extern "C"
 {
+#include "SDL_timer.h"
+#include "SDL_audio.h"
 #include "libavcodec/jni.h"
 #include "libavcodec/avcodec.h"
 #include "libavformat/avformat.h"
@@ -22,7 +24,7 @@ extern "C"
 #include "libavutil/imgutils.h"
 #include "libswscale/swscale.h"
 #include "libswresample/swresample.h"
-#include "opensl_io.h"
+//#include "opensl_io.h"
 };
 
 
@@ -205,7 +207,8 @@ typedef struct VideoState {
     Looper looper;
     EventQueue eventq;
 
-    OPENSL_STREAM* audios;
+    //OPENSL_STREAM* audios;
+    SDL_AudioDeviceID audio_dev;
 
     pthread_t read_tid;
     AVInputFormat *iformat;
@@ -1355,7 +1358,7 @@ static void *audio_thread(void *arg) {
                 is->auddec.finished = is->auddec.pkt_serial;
 #endif
 
-            android_ActivateCallback(is->audios);
+            //android_ActivateCallback(is->audios);
         }
     } while (ret >= 0 || ret == AVERROR(EAGAIN) || ret == AVERROR_EOF);
     the_end:
@@ -1710,6 +1713,7 @@ static int audio_decode_frame(VideoState *is)
     return resampled_data_size;
 }
 
+#if 0
 /* prepare a new audio buffer */
 static int sdl_audio_callback(VideoState *opaque, uint8_t *stream, int len)
 {
@@ -1792,6 +1796,50 @@ void sl_audio_callback(
     //    android_SetVolume(is->audios, is->audio_volume);
 
 }
+#endif
+
+static void sdl_audio_callback2(void *opaque, Uint8 *stream, int len)
+{
+    VideoState *is = (VideoState *)opaque;
+    int audio_size, len1;
+
+    is->audio_callback_time = av_gettime_relative();
+
+    while (len > 0) {
+        if (is->audio_buf_index >= is->audio_buf_size) {
+            audio_size = audio_decode_frame(is);
+            if (audio_size < 0) {
+                /* if error, just output silence */
+                is->audio_buf = NULL;
+                is->audio_buf_size = SDL_AUDIO_MIN_BUFFER_SIZE / is->audio_tgt.frame_size * is->audio_tgt.frame_size;
+            } else {
+                if (is->show_mode != VideoState::SHOW_MODE_VIDEO)
+                    update_sample_display(is, (int16_t *)is->audio_buf, audio_size);
+                is->audio_buf_size = audio_size;
+            }
+            is->audio_buf_index = 0;
+        }
+        len1 = is->audio_buf_size - is->audio_buf_index;
+        if (len1 > len)
+            len1 = len;
+        if (!is->muted && is->audio_buf && is->audio_volume == SDL_MIX_MAXVOLUME)  //SDL 最大音量拷贝数据
+            memcpy(stream, (uint8_t *)is->audio_buf + is->audio_buf_index, len1);
+        else {
+            memset(stream, 0, len1);
+            if (!is->muted && is->audio_buf)
+                SDL_MixAudioFormat(stream, (uint8_t *)is->audio_buf + is->audio_buf_index, AUDIO_S16SYS, len1, is->audio_volume);
+        }
+        len -= len1;
+        stream += len1;
+        is->audio_buf_index += len1;
+    }
+    is->audio_write_buf_size = is->audio_buf_size - is->audio_buf_index;
+    /* Let's assume the audio driver that is used by SDL has two periods. */
+    if (!isnan(is->audio_clock)) {
+        set_clock_at(&is->audclk, is->audio_clock - (double)(2 * is->audio_hw_buf_size + is->audio_write_buf_size) / is->audio_tgt.bytes_per_sec, is->audio_clock_serial, is->audio_callback_time / 1000000.0);
+        sync_clock_to_slave(&is->extclk, &is->audclk);
+    }
+}
 
 static int audio_open(VideoState *is, int64_t wanted_channel_layout, int wanted_nb_channels, int wanted_sample_rate, struct AudioParams *audio_hw_params)
 {
@@ -1801,7 +1849,7 @@ static int audio_open(VideoState *is, int64_t wanted_channel_layout, int wanted_
     //samples 这个值表示音频缓存区的大小（以 sample 计）。一个 sample 是一段大小为 format * channels 的音频数据。
     //size 这个值表示音频缓存区的大小（以 byte 计）。
 
-#if 1
+#if 0
     static const int next_nb_channels[] = {0, 0, 1, 6, 2, 6, 4, 6};
     static const int next_sample_rates[] = {0, 44100, 48000, 96000, 192000};
     int next_sample_rate_idx = FF_ARRAY_ELEMS(next_sample_rates) - 1;
@@ -1903,9 +1951,9 @@ static int audio_open(VideoState *is, int64_t wanted_channel_layout, int wanted_
     wanted_spec.format = AUDIO_S16SYS;
     wanted_spec.silence = 0;
     wanted_spec.samples = FFMAX(SDL_AUDIO_MIN_BUFFER_SIZE, 2 << av_log2(wanted_spec.freq / SDL_AUDIO_MAX_CALLBACKS_PER_SEC));
-    wanted_spec.callback = sdl_audio_callback;
-    wanted_spec.userdata = opaque;
-    while (!(audio_dev = SDL_OpenAudioDevice(NULL, 0, &wanted_spec, &spec, SDL_AUDIO_ALLOW_FREQUENCY_CHANGE | SDL_AUDIO_ALLOW_CHANNELS_CHANGE))) {
+    wanted_spec.callback = sdl_audio_callback2;
+    wanted_spec.userdata = is;
+    while (!(is->audio_dev = SDL_OpenAudioDevice(NULL, 0, &wanted_spec, &spec, SDL_AUDIO_ALLOW_FREQUENCY_CHANGE | SDL_AUDIO_ALLOW_CHANNELS_CHANGE))) {
         av_log(NULL, AV_LOG_WARNING, "SDL_OpenAudio (%d channels, %d Hz): %s\n",
                wanted_spec.channels, wanted_spec.freq, SDL_GetError());
         wanted_spec.channels = next_nb_channels[FFMIN(7, wanted_spec.channels)];
@@ -1953,7 +2001,7 @@ static int stream_component_open(VideoState *is, int stream_index)
 {
     AVFormatContext *ic = is->ic;
     AVCodecContext *avctx;
-    const AVCodec *codec;
+    const AVCodec *codec = NULL;
     const char *forced_codec_name = NULL;
     AVDictionary *opts = NULL;
     AVDictionaryEntry *t = NULL;
@@ -1977,8 +2025,10 @@ static int stream_component_open(VideoState *is, int stream_index)
     avctx = avcodec_alloc_context3(NULL);
     if (!avctx)
         return AVERROR(ENOMEM);
-#if 0
+#if 1
     if (ic->streams[stream_index]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO ) {
+
+#if 0
         if (!ic->streams[stream_index]->codecpar->extradata)
         {
             //unsigned char sps_pps[23] = { 0x00, 0x00, 0x00, 0x01, 0x67, 0x42, 0x00, 0x0a, 0xf8, 0x0f, 0x00, 0x44, 0xbe, 0x8,
@@ -1997,6 +2047,7 @@ static int stream_component_open(VideoState *is, int stream_index)
                 memcpy(ic->streams[stream_index]->codecpar->extradata, data, ic->streams[stream_index]->codecpar->extradata_size);
             }
         }
+#endif
 
         if (is->surface)
         {
@@ -2037,7 +2088,7 @@ static int stream_component_open(VideoState *is, int stream_index)
 
     av_log(NULL, AV_LOG_DEBUG, "stream_component_open stream_index:%d, codec_id:%d\n", stream_index, avctx->codec_id);
 
-    codec = avcodec_find_decoder(avctx->codec_id);
+    //codec = avcodec_find_decoder(avctx->codec_id);
 
     switch(avctx->codec_type){
         case AVMEDIA_TYPE_AUDIO   : is->last_audio_stream    = stream_index; forced_codec_name =    is->audio_codec_name; break;
@@ -2046,6 +2097,8 @@ static int stream_component_open(VideoState *is, int stream_index)
     }
     if (forced_codec_name)
         codec = avcodec_find_decoder_by_name(forced_codec_name);
+    if (!codec)
+        codec = avcodec_find_decoder(avctx->codec_id);
     if (!codec) {
         if (forced_codec_name) av_log(NULL, AV_LOG_WARNING,
                                       "No codec could be found with name '%s'\n", forced_codec_name);
@@ -2145,8 +2198,8 @@ static int stream_component_open(VideoState *is, int stream_index)
 
             if ((ret = decoder_start(&is->auddec, audio_thread, "audio_decoder", is)) < 0)
                 goto out;
-            //SDL_PauseAudioDevice(audio_dev, 0);
-            android_play(is->audios);
+            SDL_PauseAudioDevice(is->audio_dev, 0);
+            //android_play(is->audios);
             av_log(NULL, AV_LOG_DEBUG, "audio play successed\n");
 #endif
             break;
@@ -2208,9 +2261,7 @@ static void stream_component_close(VideoState *is, int stream_index)
     switch (codecpar->codec_type) {
         case AVMEDIA_TYPE_AUDIO:
             decoder_abort(&is->auddec, &is->sampq);
-            //SDL_CloseAudioDevice(audio_dev);
-            if (is->audios)
-                android_CloseAudioDevice(is->audios);
+            SDL_CloseAudioDevice(is->audio_dev);
             decoder_destroy(&is->auddec);
             swr_free(&is->swr_ctx);
             av_freep(&is->audio_buf1);
@@ -2228,6 +2279,7 @@ static void stream_component_close(VideoState *is, int stream_index)
         case AVMEDIA_TYPE_VIDEO:
             decoder_abort(&is->viddec, &is->pictq);
             decoder_destroy(&is->viddec);
+            av_mediacodec_default_free(is->viddec.avctx);
             if (is->window)
                 ANativeWindow_release(is->window);
             break;
@@ -2362,7 +2414,8 @@ static void update_volume(VideoState *is, int sign, double step)
 
 static void update_volume(VideoState *is, int volume)
 {
-    //update_volume(is, 1, SDL_VOLUME_STEP);
+    volume = av_clip(volume, 0, 100);
+    volume = av_clip(SDL_MIX_MAXVOLUME * volume / 100, 0, SDL_MIX_MAXVOLUME);
     is->audio_volume = volume;
 }
 
@@ -2540,9 +2593,9 @@ static void *read_thread(void *arg) {
              (ic->pb && !strncmp(is->filename, "mmsh:", 5)))) {
             /* wait 10 ms to avoid trying to get another packet */
             /* XXX: horrible */
-            //SDL_Delay(10);
+            SDL_Delay(10);
             av_log(NULL, AV_LOG_DEBUG,"wait 1 loop:%d, read:%d\n", is->loop, ret);
-            av_usleep(10000);
+            //av_usleep(10000);
             continue;
         }
 
@@ -2845,10 +2898,18 @@ static void video_image_display(VideoState *is)
 
     vp = frame_queue_peek_last(&is->pictq);
 #if 1
-
     if (!vp->uploaded) {
+#if 0
         if (upload_texture(is, vp->frame, &is->img_convert_ctx) < 0)
             return;
+#else
+        if (is->surface)
+        {
+            AVMediaCodecBuffer *buffer = (AVMediaCodecBuffer *) vp->frame->data[3];
+            if (buffer)
+                av_mediacodec_release_buffer(buffer, 1);
+        }
+#endif
         vp->uploaded = 1;
         vp->flip_v = vp->frame->linesize[0] < 0;
     }
@@ -3358,10 +3419,10 @@ static void *event_thread(void *arg) {
                 is->abort_request = 1;
                 if (is->audio_stream >= 0) {
                     decoder_abort(&is->auddec, &is->sampq);
-                    if (is->audios) {
-                        android_CloseAudioDevice(is->audios);
-                        is->audios = NULL;
-                    }
+                    //if (is->audios) {
+                    //    android_CloseAudioDevice(is->audios);
+                    //    is->audios = NULL;
+                   // }
                 }
                 if (is->video_stream >= 0)
                     decoder_abort(&is->viddec, &is->pictq);
@@ -3430,7 +3491,8 @@ VideoState *stream_open(const char *filename, AVInputFormat *iformat, void *surf
     is->rdftspeed               = 0.02;
     is->audio_callback_time     = 0;
 
-    is->audios                  = 0;
+    is->audio_dev               = -1;
+    //is->audios                  = 0;
 
     //android
     is->window_format           = WINDOW_FORMAT_RGBA_8888;
@@ -3603,6 +3665,9 @@ void *stream_surface(VideoState *is)
 
 void set_volume(VideoState *is, int volume)
 {
+#if 1
+    update_volume(is, volume);
+#else
     SLmillibel max_volume;
 
     av_log(NULL, AV_LOG_DEBUG, "set_volume %d\n", volume);
@@ -3612,6 +3677,7 @@ void set_volume(VideoState *is, int volume)
     max_volume = android_GetMaxVolume(is->audios);
 
     av_log(NULL, AV_LOG_DEBUG, "set_volume %d %d\n", volume, max_volume);
+#endif
 }
 
 int64_t get_duration(VideoState *is)
@@ -3629,8 +3695,8 @@ int64_t get_current_duration(VideoState *is)
 
 void set_rate(VideoState *is, int rate)
 {
-    if (is->audios)
-        android_SetRate(is->audios, rate);
+    //if (is->audios)
+    //    android_SetRate(is->audios, rate);
 }
 
 void set_surface(VideoState *is, void *surface)

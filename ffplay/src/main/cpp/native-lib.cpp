@@ -14,6 +14,7 @@
 
 extern "C"
 {
+#include "SDL_audio.h"
 #include "libavcodec/jni.h"
 #include "libavcodec/avcodec.h"
 #include "libavformat/avformat.h"
@@ -52,11 +53,16 @@ void android_log_callback(void* ptr, int level, const char* fmt, va_list vl)
 extern "C" JNIEXPORT jint JNICALL
 JNI_OnLoad(JavaVM *vm, void *res) {
 
+    int ret;
+
     av_log_set_level(AV_LOG_TRACE);
 
     av_log_set_callback(android_log_callback);
 
     av_jni_set_java_vm(vm, 0);
+
+    ret = SDL_AudioInit("openslES");
+    __android_log_print(ANDROID_LOG_VERBOSE, "SDL", "JNI_OnLoad -> SDL_AudioInit -- openslES -- %u", ret);
 
     //avdevice_register_all();
 
