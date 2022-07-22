@@ -41,6 +41,11 @@ extern DECLSPEC void SDLCALL SDL_DetachThread(SDL_Thread * thread);
 
 extern DECLSPEC int SDLCALL SDL_SetThreadPriority(SDL_ThreadPriority priority);
 
+extern DECLSPEC SDL_TLSID SDLCALL SDL_TLSCreate(void);
+
+extern DECLSPEC void * SDLCALL SDL_TLSGet(SDL_TLSID id);
+
+extern DECLSPEC int SDLCALL SDL_TLSSet(SDL_TLSID id, const void *value, void (SDLCALL *destructor)(void*));
 
 /* Ends C function definitions when using C++ */
 #ifdef __cplusplus

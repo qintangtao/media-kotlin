@@ -68,6 +68,9 @@ typedef int SDL_bool;
 #define SDL_zerop(x) SDL_memset((x), 0, sizeof(*(x)))
 #define SDL_zeroa(x) SDL_memset((x), 0, sizeof((x)))
 
+#define SDL_min(x, y) (((x) < (y)) ? (x) : (y))
+#define SDL_max(x, y) (((x) > (y)) ? (x) : (y))
+
 #ifdef __cplusplus
 #define SDL_reinterpret_cast(type, expression) reinterpret_cast<type>(expression)
 #define SDL_static_cast(type, expression) static_cast<type>(expression)
@@ -77,6 +80,9 @@ typedef int SDL_bool;
 #define SDL_static_cast(type, expression) ((type)(expression))
 #define SDL_const_cast(type, expression) ((type)(expression))
 #endif
+
+#define SDL_stack_alloc(type, count)    (type*)SDL_malloc(sizeof(type)*(count))
+#define SDL_stack_free(data)            SDL_free(data)
 
 extern DECLSPEC char *SDLCALL SDL_getenv(const char *name);
 extern DECLSPEC int SDLCALL SDL_setenv(const char *name, const char *value, int overwrite);

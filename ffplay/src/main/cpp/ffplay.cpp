@@ -2198,6 +2198,7 @@ static int stream_component_open(VideoState *is, int stream_index)
 
             if ((ret = decoder_start(&is->auddec, audio_thread, "audio_decoder", is)) < 0)
                 goto out;
+            // start play (0)
             SDL_PauseAudioDevice(is->audio_dev, 0);
             //android_play(is->audios);
             av_log(NULL, AV_LOG_DEBUG, "audio play successed\n");
