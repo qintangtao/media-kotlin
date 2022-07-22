@@ -2049,6 +2049,7 @@ static int stream_component_open(VideoState *is, int stream_index)
         }
 #endif
 
+#ifdef FF_MEDIACODEC_DIRECT_DISPLAY
         if (is->surface)
         {
             hw_type = av_hwdevice_find_type_by_name("mediacodec");
@@ -2077,6 +2078,8 @@ static int stream_component_open(VideoState *is, int stream_index)
                 goto fail;
             }
         }
+#endif
+
     }
 #endif
 
@@ -2279,8 +2282,13 @@ static void stream_component_close(VideoState *is, int stream_index)
             break;
         case AVMEDIA_TYPE_VIDEO:
             decoder_abort(&is->viddec, &is->pictq);
+
+#ifdef FF_MEDIACODEC_DIRECT_DISPLAY
+            if (is->viddec.avctx)
+                av_mediacodec_default_free(is->viddec.avctx);
+#endif
+
             decoder_destroy(&is->viddec);
-            av_mediacodec_default_free(is->viddec.avctx);
             if (is->window)
                 ANativeWindow_release(is->window);
             break;
@@ -2900,16 +2908,15 @@ static void video_image_display(VideoState *is)
     vp = frame_queue_peek_last(&is->pictq);
 #if 1
     if (!vp->uploaded) {
-#if 0
-        if (upload_texture(is, vp->frame, &is->img_convert_ctx) < 0)
-            return;
-#else
-        if (is->surface)
-        {
+#ifdef FF_MEDIACODEC_DIRECT_DISPLAY
+        if (is->surface) {
             AVMediaCodecBuffer *buffer = (AVMediaCodecBuffer *) vp->frame->data[3];
             if (buffer)
                 av_mediacodec_release_buffer(buffer, 1);
         }
+#else
+        if (upload_texture(is, vp->frame, &is->img_convert_ctx) < 0)
+            return;
 #endif
         vp->uploaded = 1;
         vp->flip_v = vp->frame->linesize[0] < 0;

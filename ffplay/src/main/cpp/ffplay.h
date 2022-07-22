@@ -6,6 +6,8 @@
 #define NDKDEMO_FFPLAY_H
 #include <stdint.h>
 
+//#define FF_MEDIACODEC_DIRECT_DISPLAY
+
 typedef struct VideoState VideoState;
 typedef struct AVInputFormat AVInputFormat;
 

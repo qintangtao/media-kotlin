@@ -64,8 +64,8 @@ JNI_OnLoad(JavaVM *vm, void *res) {
 
     SDL_LogSetAllPriority(SDL_LOG_PRIORITY_VERBOSE);
 
-    //ret = SDL_AudioInit("openslES");
-    ret = SDL_AudioInit("android");
+    ret = SDL_AudioInit("openslES");
+    //ret = SDL_AudioInit("android");
     __android_log_print(ANDROID_LOG_VERBOSE, "SDL", "JNI_OnLoad -> SDL_AudioInit -- openslES -- %u", ret);
 
     //avdevice_register_all();
